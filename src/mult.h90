@@ -1,0 +1,39 @@
+subroutine mult(yo,FMye,ue,uo,ieo,fclinve)
+!***********************************************************************
+! $Id: mult.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
+!
+! Multiply Hopping operator (clover) :  FMye = Fee^-1 Meo yo
+!
+!      yo : an odd/even site quark field (ieo=0/1) (input)
+!    FMye : an even/odd site quark field (ieo=0/1) (output)
+!      ue : even/odd site gauge link (ieo=0/1)
+!      uo : odd/even site gauge link (ieo=0/1)
+!     ieo : operation index
+!             ieo=0 for even site
+!             ieo=1 for odd  site
+! fclinve : even/odd site inverse clover term (ieo=0/1) (chiral rep. linear form)
+!
+!***********************************************************************
+  implicit none
+  complex(8), intent(in) :: ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(in) :: uo(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(inout) :: yo(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  integer , intent(in) :: ieo
+  complex(8), intent(out):: FMye(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(in) :: fclinve(CLSPH,0:NTH,NZ,NY,NX,2)
+
+  !====================================
+  ! boundary exchange copy on yo
+  !====================================
+  call copy_y(yo,mod(ieo+1,2))
+
+  !====================================
+  ! hopping 
+  !  FMye = F^-1ee Meo yo
+  !====================================
+  call mult_eo_tzyx(yo,FMye,ue,uo,ieo,fclinve)
+
+  mult_iter=mult_iter+1
+
+  return
+end subroutine

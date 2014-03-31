@@ -1,0 +1,121 @@
+subroutine clover_f1f2(kappa,csw,f1cle,f2cle,ucle)
+!************************************************************************
+!$Id: clover_f1f2.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
+! Calculate clover term matrix in chiral rep.:
+!
+!  kappa : hopping parameter
+!    csw : clover coefficient
+!  f1cle : even/odd site upper-left component of clover term matrix in chiral rep.
+!  f2cle : even/odd site lower-right component of clover term matrix in chiral rep.
+!   ucle : even/odd site clover leaf field strength
+!  
+!************************************************************************
+  implicit none
+  real(8), intent(in) :: kappa,csw
+  complex(8), intent(out) :: f1cle(CLSP/2,CLSP/2,NTH*NZ*NY*NX)
+  complex(8), intent(out) :: f2cle(CLSP/2,CLSP/2,NTH*NZ*NY*NX)
+  complex(8), intent(in)::ucle(COL,COL,NTH*NZ*NY*NX,NDIM*(NDIM-1)/2)
+!****
+  complex(8) :: zunit(COL,COL),zi
+  parameter (zi=(0.0d0,1.0d0))
+  real(8) :: pcswkappa,mcswkappa
+  integer :: ixyzt,ic,jc
+
+  pcswkappa=+csw*kappa
+  mcswkappa=-csw*kappa
+
+  do jc=1,COL
+  do ic=1,COL
+    zunit(ic,jc)=(0.0d0,0.0d0)
+  enddo
+  enddo
+  do ic=1,COL
+    zunit(ic,ic)=(1.0d0,0.0d0)
+  enddo
+
+!************************************************************************
+!
+! f1cl=1-csw*kappa*[(-F23+F14)sig1+(+F13+F24)sig2+(-F12+F34)sig3]
+! f2cl=1-csw*kappa*[(-F23-F14)sig1+(+F13-F24)sig2+(-F12-F34)sig3]
+!
+!  F12 = ucl(1),F13 = ucl(2),F14 = ucl(3)
+!  F23 = ucl(4),F24 = ucl(5),F34 = ucl(6)
+!
+!************************************************************************
+!$OMP PARALLEL DO PRIVATE(ixyzt,ic,jc)
+  do ixyzt=1,(NTH*NZ*NY*NX)
+    ! 6*2*9 flop
+    do jc=1,COL
+    do ic=1,COL
+      f1cle(ic    ,jc    ,ixyzt)=mcswkappa*(           &
+ &                               +ucle(ic,jc,ixyzt,6)  &
+ &                               -ucle(ic,jc,ixyzt,1)  &
+ &                               )+zunit(ic,jc)
+      f1cle(ic+COL,jc+COL,ixyzt)=mcswkappa*(           &
+ &                               +ucle(ic,jc,ixyzt,1)  &
+ &                               -ucle(ic,jc,ixyzt,6)  &
+ &                               )+zunit(ic,jc)
+    enddo
+    enddo
+  enddo ! end of do ixyzt
+!$OMP PARALLEL DO PRIVATE(ixyzt,ic,jc)
+  do ixyzt=1,(NTH*NZ*NY*NX)
+    ! 12*2*9 flop
+    do jc=1,COL
+    do ic=1,COL
+      f1cle(ic    ,jc+COL,ixyzt)=mcswkappa*(              &
+ &                               +ucle(ic,jc,ixyzt,3)     &
+ &                               -ucle(ic,jc,ixyzt,4)     &
+ &                            -zi*( ucle(ic,jc,ixyzt,2)   &
+ &                                 +ucle(ic,jc,ixyzt,5) ) &
+ &                               )
+      f1cle(ic+COL,jc    ,ixyzt)=mcswkappa*(              &
+ &                               +ucle(ic,jc,ixyzt,3)     &
+ &                               -ucle(ic,jc,ixyzt,4)     &
+ &                            +zi*( ucle(ic,jc,ixyzt,2)   &
+ &                                 +ucle(ic,jc,ixyzt,5) ) &
+ &                               )
+    enddo
+    enddo
+  enddo ! end of do ixyzt
+
+!$OMP PARALLEL DO PRIVATE(ixyzt,ic,jc)
+  do ixyzt=1,(NTH*NZ*NY*NX)
+    ! 6*2*9 flop
+    do jc=1,COL
+    do ic=1,COL
+      f2cle(ic    ,jc    ,ixyzt)=pcswkappa*(           &
+ &                               +ucle(ic,jc,ixyzt,1)  &
+ &                               +ucle(ic,jc,ixyzt,6)  &
+ &                               )+zunit(ic,jc)
+      f2cle(ic+COL,jc+COL,ixyzt)=mcswkappa*(           &
+ &                               +ucle(ic,jc,ixyzt,1)  &
+ &                               +ucle(ic,jc,ixyzt,6)  &
+ &                               )+zunit(ic,jc)
+    enddo
+    enddo
+  enddo ! end of do ixyzt
+
+!$OMP PARALLEL DO PRIVATE(ixyzt,ic,jc)
+  do ixyzt=1,(NTH*NZ*NY*NX)
+    ! 12*2*9 flop
+    do jc=1,COL
+    do ic=1,COL
+      f2cle(ic    ,jc+COL,ixyzt)=pcswkappa*(              &
+ &                               +ucle(ic,jc,ixyzt,4)     &
+ &                               +ucle(ic,jc,ixyzt,3)     &
+ &                            +zi*( ucle(ic,jc,ixyzt,2)   &
+ &                                 -ucle(ic,jc,ixyzt,5) ) &
+ &                               )
+      f2cle(ic+COL,jc    ,ixyzt)=pcswkappa*(              &
+ &                               +ucle(ic,jc,ixyzt,4)     &
+ &                               +ucle(ic,jc,ixyzt,3)     &
+ &                            -zi*( ucle(ic,jc,ixyzt,2)   &
+ &                                 -ucle(ic,jc,ixyzt,5) ) &
+ &                               )
+    enddo
+    enddo
+  enddo ! end of do ixyzt
+
+  return                                                            
+end subroutine

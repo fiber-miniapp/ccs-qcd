@@ -1,0 +1,17 @@
+!***********************************************************************
+!$Id: xrand.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
+! Simple random number generator.
+! Do not use for productive run.
+!***********************************************************************
+subroutine xrand(ir,r)
+  implicit none
+  integer, intent(inout) :: ir
+  real(8), intent(out) :: r
+  integer, parameter :: NXT=48828125
+
+  ir=ir*NXT
+  ir=IAND(ir, 2147483647)
+  r =DBLE(ir)/2147483647
+
+  return
+end subroutine

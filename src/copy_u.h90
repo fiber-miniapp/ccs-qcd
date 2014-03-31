@@ -1,0 +1,500 @@
+subroutine copy_u(ue,mu,ieo)
+!***********************************************************************
+!$Id: copy_u.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
+!
+! Boundary copy for gauge link.
+!
+!    ue : even/odd site gauge link (ieo=0/1)
+!    mu : link vector direction u_{mu}
+!   ieo : operation index
+!           ieo=0 for even site
+!           ieo=1 for odd  site
+!
+!***********************************************************************
+  implicit none
+  complex(8), intent(inout) :: ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  integer, intent(in) :: mu,ieo
+  integer :: ic,jc,ieoxyz,itb0,itb1
+  integer :: ix,iy,iz,itb,ibuff,jbuff
+  real(8) :: etime0,etime1
+
+  call xclock(etime0,8)
+#ifndef _singlePU
+  call comlib_barrier
+#endif
+
+!***** T - boundaray
+  do ix=1,NX
+  do iy=1,NY
+  do iz=1,NZ
+    ieoxyz = mod(ipeo+ix+iy+iz+ieo,2)
+    itb0 =    ieoxyz *NTH
+    itb1 = (1-ieoxyz)*NTH
+    do jc=1,COL
+    do ic=1,COL
+      ue(ic,jc,itb0,iz,iy,ix,mu)=ue(ic,jc,itb1,iz,iy,ix,mu)
+    enddo
+    enddo
+  enddo
+  enddo
+  enddo
+
+#ifndef _singlePU
+!***********************************************************************
+!********************** copy without cornar
+!********************** send
+!***** Z - boundaray
+#if _NDIMZ == 1
+  do ix=1,NX
+  do iy=1,NY
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ue(ic,jc,itb,  0,iy,ix,mu)=ue(ic,jc,itb,NZ,iy,ix,mu)
+      ue(ic,jc,itb,NZ1,iy,ix,mu)=ue(ic,jc,itb, 1,iy,ix,mu)
+    enddo
+    enddo
+    enddo
+  enddo
+  enddo
+#else
+ibuff=0
+  do ix=1,NX
+  do iy=1,NY
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ibuff=ibuff+1
+      jbuff=ic + (jc-1)*COL + (itb)*COL*COL &
+ &             + (iy-1)*COL*COL*(NTH+1) + (ix-1)*COL*COL*(NTH+1)*NY
+      gbuffup(jbuff,1,3)=ue(ic,jc,itb,NZ,iy,ix,mu)
+      gbuffdn(jbuff,1,3)=ue(ic,jc,itb, 1,iy,ix,mu)
+    enddo
+    enddo
+    enddo
+  enddo
+  enddo
+  if (ibuff.NE.GBUFF_SIZE(3)) then
+    write(*,'(" Error : com-buff size in Z")')
+    stop
+  endif
+#endif
+
+!***** Y - boundaray
+#if _NDIMY == 1
+  do ix=1,NX
+  do iz=1,NZ
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ue(ic,jc,itb,iz,  0,ix,mu)=ue(ic,jc,itb,iz,NY,ix,mu)
+      ue(ic,jc,itb,iz,NY1,ix,mu)=ue(ic,jc,itb,iz, 1,ix,mu)
+    enddo
+    enddo
+    enddo
+  enddo
+  enddo
+#else
+  ibuff=0
+  do ix=1,NX
+  do iz=1,NZ
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ibuff=ibuff+1
+      jbuff=ic + (jc-1)*COL + (itb)*COL*COL &
+ &             + (iz-1)*COL*COL*(NTH+1) + (ix-1)*COL*COL*(NTH+1)*NZ
+      gbuffup(jbuff,1,2)=ue(ic,jc,itb,iz,NY,ix,mu)
+      gbuffdn(jbuff,1,2)=ue(ic,jc,itb,iz, 1,ix,mu)
+    enddo
+    enddo
+    enddo
+  enddo
+  enddo
+  if (ibuff.NE.GBUFF_SIZE(2)) then
+    write(*,'(" Error : com-buff size in Y")')
+    stop
+  endif
+#endif
+
+!***** X - boundaray
+#if _NDIMX == 1
+  do iy=1,NY
+  do iz=1,NZ
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ue(ic,jc,itb,iz,iy,  0,mu)=ue(ic,jc,itb,iz,iy,NX,mu)
+      ue(ic,jc,itb,iz,iy,NX1,mu)=ue(ic,jc,itb,iz,iy, 1,mu)
+    enddo
+    enddo
+    enddo
+  enddo
+  enddo
+#else
+  ibuff=0
+  do iy=1,NY
+  do iz=1,NZ
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ibuff=ibuff+1
+      jbuff=ic + (jc-1)*COL + (itb)*COL*COL &
+ &             + (iz-1)*COL*COL*(NTH+1) + (iy-1)*COL*COL*(NTH+1)*NZ
+      gbuffup(jbuff,1,1)=ue(ic,jc,itb,iz,iy,NX,mu)
+      gbuffdn(jbuff,1,1)=ue(ic,jc,itb,iz,iy, 1,mu)
+    enddo
+    enddo
+    enddo
+  enddo
+  enddo
+  if (ibuff.NE.GBUFF_SIZE(1)) then
+    write(*,'(" Error : com-buff size in X")')
+    stop
+  endif
+#endif
+
+!********************** recv
+#ifndef _singlePU
+  call comlib_barrier
+#endif
+!***** Z - boundaray
+#if _NDIMZ != 1
+
+  call comlib_sendrecv( idgsendup(3) )
+  call comlib_sendrecv( idgsenddn(3) )
+
+  ibuff=0
+  do ix=1,NX
+  do iy=1,NY
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ibuff=ibuff+1
+      jbuff=ic + (jc-1)*COL + (itb)*COL*COL &
+ &             + (iy-1)*COL*COL*(NTH+1) + (ix-1)*COL*COL*(NTH+1)*NY
+      ue(ic,jc,itb,  0,iy,ix,mu)=gbuffup(jbuff,2,3)
+      ue(ic,jc,itb,NZ1,iy,ix,mu)=gbuffdn(jbuff,2,3)
+    enddo
+    enddo
+    enddo
+  enddo
+  enddo
+#endif
+
+!***** Y - boundaray
+#if _NDIMY != 1
+
+  call comlib_sendrecv( idgsendup(2) )
+  call comlib_sendrecv( idgsenddn(2) )
+
+  ibuff=0
+  do ix=1,NX
+  do iz=1,NZ
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ibuff=ibuff+1
+      jbuff=ic + (jc-1)*COL + (itb)*COL*COL &
+ &             + (iz-1)*COL*COL*(NTH+1) + (ix-1)*COL*COL*(NTH+1)*NZ
+      ue(ic,jc,itb,iz,  0,ix,mu)=gbuffup(jbuff,2,2)
+      ue(ic,jc,itb,iz,NY1,ix,mu)=gbuffdn(jbuff,2,2)
+    enddo
+    enddo
+    enddo
+  enddo
+  enddo
+#endif
+
+!***** X - boundaray
+#if _NDIMX != 1
+
+  call comlib_sendrecv( idgsendup(1) )
+  call comlib_sendrecv( idgsenddn(1) )
+
+  ibuff=0
+  do iy=1,NY
+  do iz=1,NZ
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ibuff=ibuff+1
+      jbuff=ic + (jc-1)*COL + (itb)*COL*COL &
+ &             + (iz-1)*COL*COL*(NTH+1) + (iy-1)*COL*COL*(NTH+1)*NZ
+      ue(ic,jc,itb,iz,iy,  0,mu)=gbuffup(jbuff,2,1)
+      ue(ic,jc,itb,iz,iy,NX1,mu)=gbuffdn(jbuff,2,1)
+    enddo
+    enddo
+    enddo
+  enddo
+  enddo
+#endif
+
+!***********************************************************************
+!********************** copy cornar
+!***** T - boundaray
+!***** t-x
+  do ix=0,NX1,NX1
+  do iy=1,NY
+  do iz=1,NZ
+    ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+    itb0=   ieoxyz *NTH
+    itb1=(1-ieoxyz)*NTH
+    do jc=1,COL
+    do ic=1,COL
+      ue(ic,jc,itb0,iz,iy,ix,mu)=ue(ic,jc,itb1,iz,iy,ix,mu)
+    enddo
+    enddo
+  enddo
+  enddo
+  enddo
+!***** t-y
+  do iy=0,NY1,NY1
+  do ix=1,NX
+  do iz=1,NZ
+    ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+    itb0=   ieoxyz *NTH
+    itb1=(1-ieoxyz)*NTH
+    do jc=1,COL
+    do ic=1,COL
+      ue(ic,jc,itb0,iz,iy,ix,mu)=ue(ic,jc,itb1,iz,iy,ix,mu)
+    enddo
+    enddo
+  enddo
+  enddo
+  enddo
+!***** t-z
+  do iz=0,NZ1,NZ1
+  do ix=1,NX
+  do iy=1,NY
+    ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+    itb0=   ieoxyz *NTH
+    itb1=(1-ieoxyz)*NTH
+    do jc=1,COL
+    do ic=1,COL
+      ue(ic,jc,itb0,iz,iy,ix,mu)=ue(ic,jc,itb1,iz,iy,ix,mu)
+    enddo
+    enddo
+  enddo
+  enddo
+  enddo
+
+!********************** copy cornar
+!********************** send
+!***** x-y
+#if _NDIMX == 1
+  do iz=1,NZ
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ue(ic,jc,itb,iz,  0,  0,mu)=ue(ic,jc,itb,iz,  0,NX,mu)
+      ue(ic,jc,itb,iz,NY1,  0,mu)=ue(ic,jc,itb,iz,NY1,NX,mu)
+      ue(ic,jc,itb,iz,  0,NX1,mu)=ue(ic,jc,itb,iz,  0, 1,mu)
+      ue(ic,jc,itb,iz,NY1,NX1,mu)=ue(ic,jc,itb,iz,NY1, 1,mu)
+    enddo
+    enddo
+    enddo
+  enddo
+#else
+  ibuff=0
+  do iz=1,NZ
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ibuff=ibuff+2
+      gbuffup(ibuff-1,1,4)=ue(ic,jc,itb,iz,  0,NX,mu)
+      gbuffup(ibuff  ,1,4)=ue(ic,jc,itb,iz,NY1,NX,mu)
+      gbuffdn(ibuff-1,1,4)=ue(ic,jc,itb,iz,  0, 1,mu)
+      gbuffdn(ibuff  ,1,4)=ue(ic,jc,itb,iz,NY1, 1,mu)
+    enddo
+    enddo
+    enddo
+  enddo
+  if (ibuff.NE.GBUFF_SIZE(4)) then
+    write(*,'(" Error : com-buff size in (x-y)")')
+    stop
+  endif
+#endif
+!***** x-z
+#if _NDIMX == 1
+  do iy=1,NY
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ue(ic,jc,itb,  0,iy,  0,mu)=ue(ic,jc,itb,  0,iy,NX,mu)
+      ue(ic,jc,itb,NZ1,iy,  0,mu)=ue(ic,jc,itb,NZ1,iy,NX,mu)
+      ue(ic,jc,itb,  0,iy,NX1,mu)=ue(ic,jc,itb,  0,iy, 1,mu)
+      ue(ic,jc,itb,NZ1,iy,NX1,mu)=ue(ic,jc,itb,NZ1,iy, 1,mu)
+    enddo
+    enddo
+    enddo
+  enddo
+#else
+  ibuff=0
+  do iy=1,NY
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ibuff=ibuff+2
+      gbuffup(ibuff-1,1,5)=ue(ic,jc,itb,  0,iy,NX,mu)
+      gbuffup(ibuff  ,1,5)=ue(ic,jc,itb,NZ1,iy,NX,mu)
+      gbuffdn(ibuff-1,1,5)=ue(ic,jc,itb,  0,iy, 1,mu)
+      gbuffdn(ibuff  ,1,5)=ue(ic,jc,itb,NZ1,iy, 1,mu)
+    enddo
+    enddo
+    enddo
+  enddo
+  if (ibuff.NE.GBUFF_SIZE(5)) then
+    write(*,'(" Error : com-buff size in (x-z)")')
+    stop
+  endif
+#endif
+!***** y-z
+#if _NDIMY == 1
+  do ix=1,NX
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ue(ic,jc,itb,  0,  0,ix,mu)=ue(ic,jc,itb,  0,NY,ix,mu)
+      ue(ic,jc,itb,NZ1,  0,ix,mu)=ue(ic,jc,itb,NZ1,NY,ix,mu)
+      ue(ic,jc,itb,  0,NY1,ix,mu)=ue(ic,jc,itb,  0, 1,ix,mu)
+      ue(ic,jc,itb,NZ1,NY1,ix,mu)=ue(ic,jc,itb,NZ1, 1,ix,mu)
+    enddo
+    enddo
+    enddo
+  enddo
+#else
+  ibuff=0
+  do ix=1,NX
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ibuff=ibuff+2
+      gbuffup(ibuff-1,1,6)=ue(ic,jc,itb,  0,NY,ix,mu)
+      gbuffup(ibuff  ,1,6)=ue(ic,jc,itb,NZ1,NY,ix,mu)
+      gbuffdn(ibuff-1,1,6)=ue(ic,jc,itb,  0, 1,ix,mu)
+      gbuffdn(ibuff  ,1,6)=ue(ic,jc,itb,NZ1, 1,ix,mu)
+    enddo
+    enddo
+    enddo
+  enddo
+  if (ibuff.NE.GBUFF_SIZE(6)) then
+    write(*,'(" Error : com-buff size in (y-z)")')
+    stop
+  endif
+#endif
+
+!********************** recv
+!***** x-y
+#if _NDIMX != 1
+
+  call comlib_sendrecv( idgsendup(4) )
+  call comlib_sendrecv( idgsenddn(4) )
+
+  ibuff=0
+  do iz=1,NZ
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ibuff=ibuff+2
+      ue(ic,jc,itb,iz,  0,  0,mu)=gbuffup(ibuff-1,2,4)
+      ue(ic,jc,itb,iz,NY1,  0,mu)=gbuffup(ibuff  ,2,4)
+      ue(ic,jc,itb,iz,  0,NX1,mu)=gbuffdn(ibuff-1,2,4)
+      ue(ic,jc,itb,iz,NY1,NX1,mu)=gbuffdn(ibuff  ,2,4)
+    enddo
+    enddo
+    enddo
+  enddo
+!***** x-z
+
+  call comlib_sendrecv( idgsendup(5) )
+  call comlib_sendrecv( idgsenddn(5) )
+
+  ibuff=0
+  do iy=1,NY
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ibuff=ibuff+2
+      ue(ic,jc,itb,  0,iy,  0,mu)=gbuffup(ibuff-1,2,5)
+      ue(ic,jc,itb,NZ1,iy,  0,mu)=gbuffup(ibuff  ,2,5)
+      ue(ic,jc,itb,  0,iy,NX1,mu)=gbuffdn(ibuff-1,2,5)
+      ue(ic,jc,itb,NZ1,iy,NX1,mu)=gbuffdn(ibuff  ,2,5)
+    enddo
+    enddo
+    enddo
+  enddo
+#endif
+!***** y-z
+#if _NDIMY != 1
+
+  call comlib_sendrecv( idgsendup(6) )
+  call comlib_sendrecv( idgsenddn(6) )
+
+  ibuff=0
+  do ix=1,NX
+    do itb=0,NTH
+    do jc=1,COL
+    do ic=1,COL
+      ibuff=ibuff+2
+      ue(ic,jc,itb,  0,  0,ix,mu)=gbuffup(ibuff-1,2,6)
+      ue(ic,jc,itb,NZ1,  0,ix,mu)=gbuffup(ibuff  ,2,6)
+      ue(ic,jc,itb,  0,NY1,ix,mu)=gbuffdn(ibuff-1,2,6)
+      ue(ic,jc,itb,NZ1,NY1,ix,mu)=gbuffdn(ibuff  ,2,6)
+    enddo
+    enddo
+    enddo
+  enddo
+#endif
+
+#else
+!***********************************************************************
+!***** Z - boundaray
+  do ix = 1,NX
+  do iy = 1,NY
+  do itb = 0,NTH
+    do jc = 1,COL
+    do ic = 1,COL
+      ue(ic,jc,itb,  0,iy,ix,mu)=ue(ic,jc,itb,NZ,iy,ix,mu)
+      ue(ic,jc,itb,NZ1,iy,ix,mu)=ue(ic,jc,itb, 1,iy,ix,mu)
+    enddo
+    enddo
+  enddo
+  enddo
+  enddo
+
+!***** Y - boundaray
+  do ix = 1,NX
+  do iz = 0,NZ1
+  do itb = 0,NTH
+    do jc = 1,COL
+    do ic = 1,COL
+      ue(ic,jc,itb,iz,  0,ix,mu)=ue(ic,jc,itb,iz,NY,ix,mu)
+      ue(ic,jc,itb,iz,NY1,ix,mu)=ue(ic,jc,itb,iz, 1,ix,mu)
+    enddo
+    enddo
+  enddo
+  enddo
+  enddo
+
+!***** X - boundaray
+  do iy = 0,NY1
+  do iz = 0,NZ1
+  do itb = 0,NTH
+    do jc = 1,COL
+    do ic = 1,COL
+      ue(ic,jc,itb,iz,iy,  0,mu)=ue(ic,jc,itb,iz,iy,NX,mu)
+      ue(ic,jc,itb,iz,iy,NX1,mu)=ue(ic,jc,itb,iz,iy, 1,mu)
+    enddo
+    enddo
+  enddo
+  enddo
+  enddo
+
+#endif
+
+  call xclock(etime1,8)
+  copygtime = copygtime + (etime1-etime0)
+
+  return
+end subroutine

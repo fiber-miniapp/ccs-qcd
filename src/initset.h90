@@ -1,0 +1,109 @@
+subroutine initset
+!***********************************************************************
+!$Id: initset.h90,v 1.2 2009/12/04 13:46:58 ishikawa Exp $
+!
+! Initialize misc parameters.
+!
+!***********************************************************************
+#ifndef _singlePU
+  integer :: imu(2*(NDIM-1)),i
+  integer :: npe
+#endif
+  integer :: mu
+  complex(8), parameter :: z1=(1.d0,0.d0), zi=(0.d0,1.d0)
+  integer , parameter :: NPREC=16
+
+!****************
+! Set node information
+!****************
+    call comlib_init
+#ifndef _singlePU
+    call comlib_node(nodeid,npe)
+    if (npe.NE.NPU) then
+      write(*,'(" Error : PE num (npe /= NPU) : ",I3," /= ",I3)')npe,NPU
+      stop 999
+    endif
+!    write(*,'("nodeid=",I3)')nodeid
+
+!******* node info.
+    ipsite(3)=mod(nodeid,NDIMZ)
+    ipsite(2)=mod(nodeid/NDIMZ,NDIMY)
+    ipsite(1)=    nodeid/(NDIMZ*NDIMY)
+
+    ipeo=mod(ipsite(1)*NX+ipsite(2)*NY+ipsite(3)*NZ,2)
+
+    nodeidup(1)=   +ipsite(3)                       &
+ &                 +ipsite(2)               *NDIMZ  &
+ &             +mod(ipsite(1)+1,NDIMX)      *NDIMZ*NDIMY
+    nodeiddn(1)=   +ipsite(3)                       &
+ &                 +ipsite(2)               *NDIMZ  &
+ &             +mod(ipsite(1)-1+NDIMX,NDIMX)*NDIMZ*NDIMY
+    nodeidup(2)=    ipsite(3)                       &
+ &             +mod(ipsite(2)+1,NDIMY)      *NDIMZ  &
+ &                 +ipsite(1)               *NDIMZ*NDIMY
+    nodeiddn(2)=    ipsite(3)                       &
+ &             +mod(ipsite(2)-1+NDIMY,NDIMY)*NDIMZ  &
+ &                 +ipsite(1)               *NDIMZ*NDIMY
+    nodeidup(3)=mod(ipsite(3)+1,NDIMZ)              &
+ &                 +ipsite(2)               *NDIMZ  &
+ &                 +ipsite(1)               *NDIMZ*NDIMY
+    nodeiddn(3)=mod(ipsite(3)-1+NDIMZ,NDIMZ)        &
+ &                 +ipsite(2)               *NDIMZ  &
+ &                 +ipsite(1)               *NDIMZ*NDIMY
+
+!******* copy info
+!******* copy direction
+    imu(1)=1
+    imu(2)=2
+    imu(3)=3
+    imu(4)=1
+    imu(5)=1
+    imu(6)=2
+    do mu=1,(NDIM-1)*2
+      call comlib_make2(idgsendup(mu),nodeidup(imu(mu)),gbuffup(1,1,mu),gbuffup(1,2,mu),GBUFF_SIZE(mu)*NPREC)
+      call comlib_make2(idgsenddn(mu),nodeiddn(imu(mu)),gbuffdn(1,1,mu),gbuffdn(1,2,mu),GBUFF_SIZE(mu)*NPREC)
+
+      call comlib_make2(idfsendup(mu),nodeidup(imu(mu)),fbuffup(1,1,mu),fbuffup(1,2,mu),FBUFF_SIZE(mu)*NPREC)
+      call comlib_make2(idfsenddn(mu),nodeiddn(imu(mu)),fbuffdn(1,1,mu),fbuffdn(1,2,mu),FBUFF_SIZE(mu)*NPREC)
+    enddo
+
+#else
+    ipsite(1)=0
+    ipsite(2)=0
+    ipsite(3)=0
+    ipeo=0
+    nodeid=0
+#endif
+
+!**********************
+! Set nnb sites index
+!**********************
+  do mu=1,4
+    isx(mu)=0
+    isy(mu)=0
+    isz(mu)=0
+    ist(mu)=0
+  enddo
+  isx(1)=1
+  isy(2)=1
+  isz(3)=1
+  ist(4)=1
+
+!***********************************
+! define hyperplanes, tensor index
+!***********************************
+  imunu(1,2)=1
+  imunu(1,3)=2
+  imunu(1,4)=3
+  imunu(2,3)=4
+  imunu(2,4)=5
+  imunu(3,4)=6
+  imunu(2,1)=-1
+  imunu(3,1)=-2
+  imunu(4,1)=-3
+  imunu(3,2)=-4
+  imunu(4,2)=-5
+  imunu(4,3)=-6
+
+  return
+end subroutine

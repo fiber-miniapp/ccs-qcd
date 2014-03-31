@@ -1,0 +1,209 @@
+subroutine init_p(pe,po)
+!***********************************************************************
+!$Id: init_p.h90,v 1.2 2009/12/04 14:42:27 ishikawa Exp $
+! Initialize canonical momentum of gauge link with 
+! Gaussian noise
+!
+!    pe : even site canonical momentum of gauge link
+!    po : odd site canonical momentum of gauge link
+!
+!***********************************************************************
+  implicit none
+  complex(8), intent(out) :: pe(COL,COL,0:NTH,NZ,NY,NX,NDIM)
+  complex(8), intent(out) :: po(COL,COL,0:NTH,NZ,NY,NX,NDIM)
+!***
+  integer :: COLADJ
+  parameter (COLADJ=COL**2-1)
+  real(8) :: He(COLADJ,0:NTH),Ho(COLADJ,0:NTH)
+  complex(8) :: SU(COL,COL,COLADJ)
+  real(8) :: pi2
+  real(8) :: th(COLADJ*NTH),yr(COLADJ*NTH)
+  integer :: ix,iy,iz,itb,ieoxyz,ic,jc,mu,icad
+  integer :: ictb,ixx,iyy,izz,ipx,ipy,ipz
+  real(8) :: rtmp
+  real(8), allocatable :: tth(:,:,:,:,:)
+  real(8), allocatable :: tyr(:,:,:,:,:)
+
+!  allocate(tth(COLADJ*NTH,NTZ,NTY,NTX,NDIM))
+!  allocate(tyr(COLADJ*NTH,NTZ,NTY,NTX,NDIM))
+  allocate(tth(COLADJ*NTH,NZ,NY,NX,NDIM))
+  allocate(tyr(COLADJ*NTH,NZ,NY,NX,NDIM))
+
+  pi2 = 8.0d0*datan(1.0d0)
+
+  do icad = 1,COLADJ
+    do jc = 1,COL
+    do ic = 1,COL
+      SU(ic,jc,icad) = ( 0.0d0, 0.0d0)
+    enddo
+    enddo
+  enddo
+
+!***************************
+! set su(3) generator 
+! (times sqrt(2))
+!***************************
+  SU(1,2,1)= ( 1.0d0, 0.0d0)/sqrt(2.0d0)
+  SU(2,1,1)= ( 1.0d0, 0.0d0)/sqrt(2.0d0)
+  SU(1,2,2)= ( 0.0d0,-1.0d0)/sqrt(2.0d0)
+  SU(2,1,2)= ( 0.0d0, 1.0d0)/sqrt(2.0d0)
+  SU(1,1,3)= ( 1.0d0, 0.0d0)/sqrt(2.0d0)
+  SU(2,2,3)= (-1.0d0, 0.0d0)/sqrt(2.0d0)
+  SU(1,3,4)= ( 1.0d0, 0.0d0)/sqrt(2.0d0)
+  SU(3,1,4)= ( 1.0d0, 0.0d0)/sqrt(2.0d0)
+  SU(1,3,5)= ( 0.0d0,-1.0d0)/sqrt(2.0d0)
+  SU(3,1,5)= ( 0.0d0, 1.0d0)/sqrt(2.0d0)
+  SU(2,3,6)= ( 1.0d0, 0.0d0)/sqrt(2.0d0)
+  SU(3,2,6)= ( 1.0d0, 0.0d0)/sqrt(2.0d0)
+  SU(2,3,7)= ( 0.0d0,-1.0d0)/sqrt(2.0d0)
+  SU(3,2,7)= ( 0.0d0, 1.0d0)/sqrt(2.0d0)
+  SU(1,1,8)= ( 1.0d0, 0.0d0)/sqrt(6.0d0)
+  SU(2,2,8)= ( 1.0d0, 0.0d0)/sqrt(6.0d0)
+  SU(3,3,8)= (-2.0d0, 0.0d0)/sqrt(6.0d0)
+
+!**********************************
+! set initial momentum with
+! standerd FORTRAN90 intrinsic
+! subroutine rondom_number.
+!
+! programmed independent on 
+! parallelization size
+!**********************************
+  do mu=1,NDIM
+  do ixx=1,NTX
+  do iyy=1,NTY
+  do izz=1,NTZ
+    ix = mod(ixx-1,NX)+1
+    iy = mod(iyy-1,NY)+1
+    iz = mod(izz-1,NZ)+1
+    ipx = (ixx-1)/NX
+    ipy = (iyy-1)/NY
+    ipz = (izz-1)/NZ
+    do ictb=1,COLADJ*NTH
+      call xrand(ir,rtmp)
+      if (ipx==ipsite(1).AND.ipy==ipsite(2).AND.ipz==ipsite(3)) then
+        tth(ictb,iz,iy,ix,mu)=rtmp
+      endif
+!      tth(ictb,izz,iyy,ixx,mu)=rtmp
+      call xrand(ir,rtmp)
+      if (ipx==ipsite(1).AND.ipy==ipsite(2).AND.ipz==ipsite(3)) then
+        tyr(ictb,iz,iy,ix,mu)=rtmp
+      endif
+!      tyr(ictb,izz,iyy,ixx,mu)=rtmp
+    enddo
+  enddo
+  enddo
+  enddo
+  enddo
+!$OMP PARALLEL DO PRIVATE(mu,ix,iy,iz,ieoxyz,itb,ictb,ic,jc,ixx,iyy,izz,yr,th,He)
+  do mu=1,NDIM
+  do ix=1,NX
+  do iy=1,NY
+  do iz=1,NZ
+    ieoxyz=mod(ipeo+ix+iy+iz,2)
+    ixx = ix + ipsite(1)*NX
+    iyy = iy + ipsite(2)*NY
+    izz = iz + ipsite(3)*NZ
+
+    do ictb=1,COLADJ*NTH
+      yr(ictb) = dsqrt(-2.0d0*dlog(dble(tyr(ictb,iz,iy,ix,mu))))
+      th(ictb) =              dsin(dble(tth(ictb,iz,iy,ix,mu)*pi2))
+!      yr(ictb) = dsqrt(-2.0d0*dlog(dble(tyr(ictb,izz,iyy,ixx,mu))))
+!      th(ictb) =              dsin(dble(tth(ictb,izz,iyy,ixx,mu)*pi2))
+    enddo
+    do itb=1-ieoxyz,NTH-ieoxyz
+    do ic=1,COLADJ
+      He(ic,itb)=yr(ic+COL*(itb+ieoxyz-1))   &
+ &              *th(ic+COL*(itb+ieoxyz-1))
+    enddo
+    enddo
+    do itb=1-ieoxyz,NTH-ieoxyz
+      do jc = 1,COL
+      do ic = 1,COL
+        pe(ic,jc,itb,iz,iy,ix,mu)=He(1,itb)*SU(ic,jc,1)   &
+ &                               +He(2,itb)*SU(ic,jc,2)   &
+ &                               +He(3,itb)*SU(ic,jc,3)   &
+ &                               +He(4,itb)*SU(ic,jc,4)   &
+ &                               +He(5,itb)*SU(ic,jc,5)   &
+ &                               +He(6,itb)*SU(ic,jc,6)   &
+ &                               +He(7,itb)*SU(ic,jc,7)   &
+ &                               +He(8,itb)*SU(ic,jc,8)
+      enddo
+      enddo
+    enddo
+  enddo
+  enddo
+  enddo
+  enddo
+
+  do mu=1,NDIM
+  do ixx=1,NTX
+  do iyy=1,NTY
+  do izz=1,NTZ
+    ix = mod(ixx-1,NX)+1
+    iy = mod(iyy-1,NY)+1
+    iz = mod(izz-1,NZ)+1
+    ipx = (ixx-1)/NX
+    ipy = (iyy-1)/NY
+    ipz = (izz-1)/NZ
+    do ictb=1,COLADJ*NTH
+      call xrand(ir,rtmp)
+      if (ipx==ipsite(1).AND.ipy==ipsite(2).AND.ipz==ipsite(3)) then
+        tth(ictb,iz,iy,ix,mu)=rtmp
+      endif
+!      tth(ictb,izz,iyy,ixx,mu)=rtmp
+      call xrand(ir,rtmp)
+      if (ipx==ipsite(1).AND.ipy==ipsite(2).AND.ipz==ipsite(3)) then
+        tyr(ictb,iz,iy,ix,mu)=rtmp
+      endif
+!      tyr(ictb,izz,iyy,ixx,mu)=rtmp
+    enddo
+  enddo
+  enddo
+  enddo
+  enddo
+!$OMP PARALLEL DO PRIVATE(mu,ix,iy,iz,ieoxyz,itb,ictb,ic,jc,ixx,iyy,izz,yr,th,Ho)
+  do mu=1,NDIM
+  do ix=1,NX
+  do iy=1,NY
+  do iz=1,NZ
+    ieoxyz=mod(ipeo+ix+iy+iz,2)
+    ixx = ix + ipsite(1)*NX
+    iyy = iy + ipsite(2)*NY
+    izz = iz + ipsite(3)*NZ
+
+    do ictb=1,COLADJ*NTH
+      yr(ictb) = dsqrt(-2.0d0*dlog(dble(tyr(ictb,iz,iy,ix,mu))))
+      th(ictb) =              dsin(dble(tth(ictb,iz,iy,ix,mu)*pi2))
+!      yr(ictb) = dsqrt(-2.0d0*dlog(dble(tyr(ictb,izz,iyy,ixx,mu))))
+!      th(ictb) =              dsin(dble(tth(ictb,izz,iyy,ixx,mu)*pi2))
+    enddo
+    do itb=ieoxyz,NTH+ieoxyz-1
+    do ic=1,COLADJ
+      Ho(ic,itb)=yr(ic+COL*(itb+1-ieoxyz-1))   &
+ &              *th(ic+COL*(itb+1-ieoxyz-1))
+    enddo
+    enddo
+    do itb=ieoxyz,NTH+ieoxyz-1
+      do jc = 1,COL
+      do ic = 1,COL
+        po(ic,jc,itb,iz,iy,ix,mu)=Ho(1,itb)*SU(ic,jc,1)   &
+ &                               +Ho(2,itb)*SU(ic,jc,2)   &
+ &                               +Ho(3,itb)*SU(ic,jc,3)   &
+ &                               +Ho(4,itb)*SU(ic,jc,4)   &
+ &                               +Ho(5,itb)*SU(ic,jc,5)   &
+ &                               +Ho(6,itb)*SU(ic,jc,6)   &
+ &                               +Ho(7,itb)*SU(ic,jc,7)   &
+ &                               +Ho(8,itb)*SU(ic,jc,8)
+      enddo
+      enddo
+    enddo
+  enddo
+  enddo
+  enddo
+  enddo
+
+  deallocate(tth,tyr)
+
+  return
+end subroutine

@@ -1,0 +1,412 @@
+========================================
+ CCS QCD solver benchmark test program
+========================================
+
+VERSION 0.92  : September 25, 2012 : Exa FS version
+VERSION 0.912 : December 6, 2009 : release candidate No.3.
+VERSION 0.911 : December 5, 2009 : release candidate No.2.
+VERSION 0.91  : December 3, 2009 : release candidate.
+VERSION 0.90  : December 2, 2009 : converted from my personal benchmarking
+                                   program.
+
+
+This benchmark test program measures CPU and MPI performances.
+
+This program benchmarks the performance of a linear equation solver 
+with a large sparse coefficient matrix appering in a lattice QCD probrem.
+Lattice QCD describes the property of protons, neutrons and neucleons 
+in terms of more fundamental interacting elementary particles gluon and
+quarks.
+
+The four dimensional (spase and time) coordinate is latticized and the
+equation of motion for quarks is converted to a large scale linear equation
+by the finite-difference method.
+
+The coefficient matrix of the induced linear equation used in this program
+is the O(a)-improved Wilson-Dirac operator. The linear equation is
+preconditioned by the site red-black ordering and is solved with BiCGStab
+algorithm.
+
+The coefficient matrix contains two parameters, 
+
+  kappa : the hopping parameter which is proportinal to the inverse quark
+          mass.
+  csw   : Sheikholeslami-Wohlert O(a)-improvment (clover) coefficient 
+          parameter which removes leading lattice cut off (finite-difference)
+          errors.
+
+and depends on a gluon field. Although the gluon field should be generated
+via the gluon dynamics governed by its quantum equation of motion, we simply
+prepare a random gluon field in this benchmark program.
+
+This program is written in Fortran 90 language and can run in parallel 
+using MPI. To compile this program, an MPI implementation with Fortran 90
+compiler is required. "Makefile" is supplied to compile the program and
+user should edit "make.inc" to adjust his/her compile environment.
+
+Lattice parameters should be specified before typing 'make' command. 
+The lattice size can be configured in "config.h" file. The size in each 
+direction should be an even number. Too huge number, such as 32 or 48, may
+require an excessive computer resource to execute this benchmark.
+
+The degree of parallelism can be configured in "config.h" again. The spatial
+direction (x,y,z) can be parallelized. The parallelism must exactly divide
+the corresponding lattice extent.
+
+After setting "make.inc" and "config.h", type 'make' to generate the program.
+This requires GNU make command.
+
+See also "COMPILE" file to compile the program.
+
+User must specify the following command arguments to execute the program,
+for ex. Unix shell command line:
+
+% ./ccs_qcd_solver_bench loop_count kappa csw tolerance
+
+Command args.:
+
+ kappa        Hopping parameter, should be near 0.125d0. Give a double 
+              precision number.
+ csw          Clover coefficient, should be near 1.0d0. Give a double precision
+              number.
+ tolerance    Tolerance for BiCGStab solver. for ex. 1.0d-14. Give a double
+              precision number. The program will stop when the relative error
+              reachs below this tolerance.
+
+Note that, we employ the non-starndard Fortran routines, getarg and iargc, to
+read and count the command argument line. If you do not have the same routiens,
+some modification may be required in the main source file "ccs_qcd_solver_bench.F90".
+
+With parallel setting, the command execution sequence depends on the MPI 
+implementation or the parallel environment you used. 
+for ex. interactive MPI command execution:
+
+% mpirun -np 4 ./ccs_qcd_solver_bench 0.124d0 1.2d0 1.d-13
+
+Since the linear equation to be solved depends on the lattice extent, but is
+independent of the parallelism. The same result shown above must be reproduced
+with the same lattice size with different parallelism.
+
+Sample results:
+To verify the benchmark result, we supply some sample results and "config.h"
+in SAPMLE_LARGE/, SAMPLE_MEDIUM/, and SAMPLE_SMALL/ directories depending on
+the lattice extent.  SAMPLE_LARGE/ contains the result and config with 32^3x64,
+SAMPLE_MEDIUM/ with 16^3x32, and SAMPLE_SMALL/ with 8^3x16. The following command
+parameters were used to generate the sample results:
+
+./ccs_qcd_solver_bench 0.124d0 1.0d0 1.d-14
+
+for ex. SAMPLE_SMALL/Output.00001 contains the standard output as follows.
+==== BEGIN ====
+================================================================================
+ CCS QCD Solver Benchmark Program
+ CCS-QCDSolverBench-v0.912
+    Lattice Size :  8  8  8  16
+ Node Array Size :  2  2  1
+ PU Lattice Size :  4  4  8   8*2
+            Loop :        1
+           Kappa :      0.124000
+             CSW :      1.000000
+             Tol :  0.100000E-13
+================================================================================
+ 
+  Sum[Log[Det[F[n]]],n] =   -57.8779067653340     
+ 
+ Check sum U: (96998.0902057454,54.8070482213460)
+ Check sum Y: (-121.786443862756,265.752563467038)
+#    0 ERR:  0.1000000000000000E+01
+#    1 ERR:  0.2874115952711985E+00
+#    2 ERR:  0.1385099525167500E+00
+#    3 ERR:  0.1846466018189800E+00
+#    4 ERR:  0.1047791615707003E+00
+#    5 ERR:  0.6494989516367114E-01
+#    6 ERR:  0.4556776603829248E-01
+#    7 ERR:  0.1631179197320111E+00
+#    8 ERR:  0.9068594068372902E-01
+#    9 ERR:  0.1093721103264303E+00
+#   10 ERR:  0.7542765959340264E-01
+#   11 ERR:  0.3307058411781643E-01
+#   12 ERR:  0.2658988743049160E-01
+#   13 ERR:  0.2451684698714691E-01
+#   14 ERR:  0.2049505535533216E-01
+#   15 ERR:  0.2654993147984237E-01
+#   16 ERR:  0.2066507313331752E-01
+#   17 ERR:  0.1376988558031955E-01
+#   18 ERR:  0.1153220770010585E-01
+#   19 ERR:  0.8338109651395966E-02
+#   20 ERR:  0.7418455286452962E-02
+#   21 ERR:  0.8189202664743260E-02
+#   22 ERR:  0.7244210125252177E-02
+#   23 ERR:  0.9492844554004232E-02
+#   24 ERR:  0.8577532541239729E-02
+#   25 ERR:  0.1035911337952216E-01
+#   26 ERR:  0.9031181517221097E-02
+#   27 ERR:  0.3051327737430883E-01
+#   28 ERR:  0.2770979999668262E-01
+#   29 ERR:  0.1815121350939796E-01
+#   30 ERR:  0.1590671809321849E-01
+#   31 ERR:  0.9610682817099085E-02
+#   32 ERR:  0.8180155503465465E-02
+#   33 ERR:  0.4518036971172366E-02
+#   34 ERR:  0.3773531297812358E-02
+#   35 ERR:  0.5245520741564106E-02
+#   36 ERR:  0.4131661149050226E-02
+#   37 ERR:  0.2299697240518313E-02
+#   38 ERR:  0.2109306883642066E-02
+#   39 ERR:  0.1743368254927911E-02
+#   40 ERR:  0.1603448038872139E-02
+#   41 ERR:  0.2167827595079721E-02
+#   42 ERR:  0.1825261220920296E-02
+#   43 ERR:  0.1963512173034623E-02
+#   44 ERR:  0.1801294749694829E-02
+#   45 ERR:  0.2814883037179712E-03
+#   46 ERR:  0.2417402347924920E-03
+#   47 ERR:  0.4431650980303647E-03
+#   48 ERR:  0.4059224030829781E-03
+#   49 ERR:  0.2792031136926434E-03
+#   50 ERR:  0.2218982327964657E-03
+#   51 ERR:  0.1303518635821610E-03
+#   52 ERR:  0.1199422879446313E-03
+#   53 ERR:  0.8070456960446463E-04
+#   54 ERR:  0.6792522790418845E-04
+#   55 ERR:  0.6239033742033893E-04
+#   56 ERR:  0.5750919223033588E-04
+#   57 ERR:  0.5460106566729689E-04
+#   58 ERR:  0.4960305762931264E-04
+#   59 ERR:  0.4700492533112073E-04
+#   60 ERR:  0.4100386508859874E-04
+#   61 ERR:  0.3903247561049289E-04
+#   62 ERR:  0.3596490307838658E-04
+#   63 ERR:  0.1321038476678798E-03
+#   64 ERR:  0.1214416999944659E-03
+#   65 ERR:  0.6078273388102975E-04
+#   66 ERR:  0.5551343189634625E-04
+#   67 ERR:  0.4776071921819237E-04
+#   68 ERR:  0.4367257684805647E-04
+#   69 ERR:  0.4520911318247224E-04
+#   70 ERR:  0.3963013215467154E-04
+#   71 ERR:  0.2689499937859849E-04
+#   72 ERR:  0.2407927212033643E-04
+#   73 ERR:  0.2417557764795507E-04
+#   74 ERR:  0.2146036697602578E-04
+#   75 ERR:  0.4374976502452186E-04
+#   76 ERR:  0.2501676030749070E-04
+#   77 ERR:  0.1507204150277015E-04
+#   78 ERR:  0.1374335200391900E-04
+#   79 ERR:  0.6690137198559499E-05
+#   80 ERR:  0.5841787327406917E-05
+#   81 ERR:  0.5157614084055591E-05
+#   82 ERR:  0.4649302436309917E-05
+#   83 ERR:  0.5299769170079919E-05
+#   84 ERR:  0.4807495681018974E-05
+#   85 ERR:  0.2718022494030521E-04
+#   86 ERR:  0.2236404832527759E-04
+#   87 ERR:  0.2084465615288939E-05
+#   88 ERR:  0.1896588141758106E-05
+#   89 ERR:  0.1298446069869885E-05
+#   90 ERR:  0.1134580670057957E-05
+#   91 ERR:  0.4275968935968111E-06
+#   92 ERR:  0.3848461429525848E-06
+#   93 ERR:  0.3354754528191576E-06
+#   94 ERR:  0.3111722331293885E-06
+#   95 ERR:  0.1368675815073386E-05
+#   96 ERR:  0.1063835026507905E-05
+#   97 ERR:  0.2595462975501028E-06
+#   98 ERR:  0.2331152179398202E-06
+#   99 ERR:  0.2236352200386417E-06
+#  100 ERR:  0.1969813081230718E-06
+#  101 ERR:  0.1760680737928005E-06
+#  102 ERR:  0.1635190258876813E-06
+#  103 ERR:  0.1603686154307814E-06
+#  104 ERR:  0.1459674556211688E-06
+#  105 ERR:  0.7105352986019286E-06
+#  106 ERR:  0.6307000120327889E-06
+#  107 ERR:  0.1183222406766903E-06
+#  108 ERR:  0.1096538117613497E-06
+#  109 ERR:  0.1332636192488704E-06
+#  110 ERR:  0.1230646948000344E-06
+#  111 ERR:  0.1810171177786341E-06
+#  112 ERR:  0.1606610698944468E-06
+#  113 ERR:  0.1690563092410787E-06
+#  114 ERR:  0.1478897632557299E-06
+#  115 ERR:  0.5399848105997619E-05
+#  116 ERR:  0.4136619755687590E-05
+#  117 ERR:  0.3826865863779493E-06
+#  118 ERR:  0.3303366611550879E-06
+#  119 ERR:  0.8725098159307784E-06
+#  120 ERR:  0.7732978820559382E-06
+#  121 ERR:  0.1789585761541105E-06
+#  122 ERR:  0.6892403792848656E-07
+#  123 ERR:  0.1383388462101900E-06
+#  124 ERR:  0.1222126804073724E-06
+#  125 ERR:  0.6222414755716766E-07
+#  126 ERR:  0.2617285066962283E-07
+#  127 ERR:  0.7494573938043901E-08
+#  128 ERR:  0.6499874130203295E-08
+#  129 ERR:  0.1876584880935595E-08
+#  130 ERR:  0.1726138586474259E-08
+#  131 ERR:  0.1638170645886084E-08
+#  132 ERR:  0.1521399804462776E-08
+#  133 ERR:  0.1403211499439645E-08
+#  134 ERR:  0.1272906677380798E-08
+#  135 ERR:  0.1288326983397559E-08
+#  136 ERR:  0.1184569313442014E-08
+#  137 ERR:  0.1127424833509821E-08
+#  138 ERR:  0.1042559210149320E-08
+#  139 ERR:  0.1074258009554186E-08
+#  140 ERR:  0.1001975483354696E-08
+#  141 ERR:  0.9398310793003554E-09
+#  142 ERR:  0.7718773715420589E-09
+#  143 ERR:  0.2438707456276735E-08
+#  144 ERR:  0.1336688250946556E-08
+#  145 ERR:  0.6276397607282907E-09
+#  146 ERR:  0.5582530311790030E-09
+#  147 ERR:  0.5368323950926271E-09
+#  148 ERR:  0.5013150726453145E-09
+#  149 ERR:  0.6543496731337987E-09
+#  150 ERR:  0.5781395678549407E-09
+#  151 ERR:  0.4234110986709744E-09
+#  152 ERR:  0.3676342732435506E-09
+#  153 ERR:  0.6125912878691167E-09
+#  154 ERR:  0.5594084608369344E-09
+#  155 ERR:  0.7790620597907306E-09
+#  156 ERR:  0.5863961897466249E-09
+#  157 ERR:  0.8145117147223260E-09
+#  158 ERR:  0.4488869713790000E-09
+#  159 ERR:  0.1283021826359818E-08
+#  160 ERR:  0.5873081927946218E-09
+#  161 ERR:  0.5843344107849576E-09
+#  162 ERR:  0.5302704360714238E-09
+#  163 ERR:  0.1565229355841460E-09
+#  164 ERR:  0.1402194964531985E-09
+#  165 ERR:  0.1210959698127251E-09
+#  166 ERR:  0.1040883022383776E-09
+#  167 ERR:  0.8908541718907014E-10
+#  168 ERR:  0.8164708371340437E-10
+#  169 ERR:  0.9373204523393044E-10
+#  170 ERR:  0.8515455948526942E-10
+#  171 ERR:  0.1310700983029117E-09
+#  172 ERR:  0.1113753285343865E-09
+#  173 ERR:  0.1863973086640660E-10
+#  174 ERR:  0.1620564379984909E-10
+#  175 ERR:  0.1055460168392870E-10
+#  176 ERR:  0.9616139193812525E-11
+#  177 ERR:  0.1986246720910525E-10
+#  178 ERR:  0.1763173270186822E-10
+#  179 ERR:  0.4924249195258386E-11
+#  180 ERR:  0.4133354297835857E-11
+#  181 ERR:  0.3366224606297425E-11
+#  182 ERR:  0.3145060171247269E-11
+#  183 ERR:  0.2950342751573381E-11
+#  184 ERR:  0.2760631183909463E-11
+#  185 ERR:  0.2750341604886289E-11
+#  186 ERR:  0.2580715593086822E-11
+#  187 ERR:  0.2404965849988571E-11
+#  188 ERR:  0.2262833489572968E-11
+#  189 ERR:  0.2246342892835635E-11
+#  190 ERR:  0.2112832585500966E-11
+#  191 ERR:  0.2224196375604940E-11
+#  192 ERR:  0.1966855249124042E-11
+#  193 ERR:  0.1509027205585813E-11
+#  194 ERR:  0.1376015043749585E-11
+#  195 ERR:  0.2817117722107472E-11
+#  196 ERR:  0.2574956476824459E-11
+#  197 ERR:  0.2396893196263477E-11
+#  198 ERR:  0.2187050047502309E-11
+#  199 ERR:  0.9191834560971454E-12
+#  200 ERR:  0.8403132357112849E-12
+#  201 ERR:  0.7934881091724437E-12
+#  202 ERR:  0.7270528304735246E-12
+#  203 ERR:  0.7851849097821733E-12
+#  204 ERR:  0.6893856900961970E-12
+#  205 ERR:  0.6465316806092323E-12
+#  206 ERR:  0.4215574197528267E-12
+#  207 ERR:  0.4819286441554540E-12
+#  208 ERR:  0.3779081592828653E-12
+#  209 ERR:  0.5211081004018779E-12
+#  210 ERR:  0.4217693107460616E-12
+#  211 ERR:  0.2979757049259436E-12
+#  212 ERR:  0.2510691569970938E-12
+#  213 ERR:  0.2029966786099999E-12
+#  214 ERR:  0.1595533732475082E-12
+#  215 ERR:  0.1590645234535081E-12
+#  216 ERR:  0.1457001683003146E-12
+#  217 ERR:  0.1770537725692460E-12
+#  218 ERR:  0.1567091163252426E-12
+#  219 ERR:  0.4516243020963822E-13
+#  220 ERR:  0.3551722028248875E-13
+#  221 ERR:  0.2275574436609477E-13
+#  222 ERR:  0.1870932033363629E-13
+#  223 ERR:  0.1514228063008281E-13
+#  224 ERR:  0.1333454296310101E-13
+#  225 ERR:  0.1176462456658410E-13
+#  226 ERR:  0.1102775890076777E-13
+#  227 ERR:  0.1008537665363840E-13
+#  228 ERR:  0.9326598527563636E-14
+ Check sum U: (96998.0902057454,54.8070482213460)
+ Check sum Y: (-121.786443862756,265.752563467038)
+  Iter =   228
+   Res =    0.936328965222640E-14
+|YDE|^2=    0.587744661711278E+05
+================================================================================
+  Clover + Clover_inv Performance.
+           Flop [MFlop/node] :     33.5901
+          Elapsed Time [sec] :      0.0234
+Performance [MFlop/sec/node] :   1433.1795
+--------------------------------------------------------------------------------
+  BiCGStab(CPU:double precision) Performance.
+           Flop [MFlop/node] :   1015.8070
+          Elapsed Time [sec] :      1.8828
+Performance [MFlop/sec/node] :    539.5157
+      Full Copy_y Time [sec] :      1.3516
+    MPI Commun. SizeX[Mbyte] :     48.5156
+    MPI Commun. TimeX  [sec] :      0.5391
+    MPI Commun. BandX [MB/s] :     90.0000
+    MPI Commun. SizeY[Mbyte] :     48.5156
+    MPI Commun. TimeY  [sec] :      0.5938
+    MPI Commun. BandY [MB/s] :     81.7105
+--------------------------------------------------------------------------------
+  BiCGStab Total
+          Elapsed Time [sec] :      1.8828
+================================================================================
+==== END ====
+
+The lines 
+....
+#  197 ERR:  0.2396893196263477E-11
+#  198 ERR:  0.2187050047502309E-11
+#  199 ERR:  0.9191834560971454E-12
+#  200 ERR:  0.8403132357112849E-12
+....
+show the iteration count of BiCGStab and the relative residual norm of
+the problem linear equation.
+
+The line
+...
+|YDE|^2=    0.587744661711278E+05
+...
+shows the squared norm of the solution vector. This number should be reproduced
+when you execute the program with the same setting.
+
+Note that, the above numerical numbers suffer from rounding error 
+and loss of significance. The last few digits may differ from your result.
+
+[CONTACT]
+
+CCS QCD solver benchmark project 
+
+Ken-Ichi Ishikawa (Hiroshima University) 
+Yoshinobu Kuramashi (University of Tsukuba) 
+Akira Ukawa (University of Tsukuba) 
+Taisuke Boku (University of Tsukuba) 
+
+Center for Computational Sciences 
+University of Tsukuba 
+1-1-1 Tennodai 
+Tsukuba-city 
+Ibaraki 305-8577 
+Japan 
+
+URL: http://www.ccs.tsukuba.ac.jp/
+EMAIL: ishikawa[_AT_]theo.phys.sci.hiroshima-u.ac.jp
+

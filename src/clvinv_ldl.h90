@@ -1,0 +1,204 @@
+subroutine clvinv_ldl(be,Ae,logdetAe,idet)
+!************************************************************************
+!* Using LDL decomposition, calcluate the inverse of 6x6 clover term matrix.
+!*  Solve:  F X = 1 -> X = F^-1
+!*
+!*      be : even/odd site inverse clover term matrix (output)
+!*      Ae : even/odd site clover term matrix (input)
+!* logdetAe : log determinant of Ae
+!*    idet : if idet = 1 then calc. logdetAe.
+!*
+!************************************************************************
+  integer, parameter :: NSITE=NTH*NZ*NY*NX
+  complex(8), intent(out) :: be(CLSP/2,CLSP/2,NSITE)
+  complex(8), intent(in) ::  Ae(CLSP/2,CLSP/2,NSITE)
+  real(8), intent(out) :: logdetAe
+  integer, intent(in) :: idet
+
+  complex(8) :: zunit(CLSP/2,CLSP/2)
+  complex(8), allocatable ::    AAe(:,:,:)
+  complex(8), allocatable ::  ctmp1(:,:,:)
+  real(8), allocatable :: d(:)
+  integer, parameter :: iout=23
+  integer :: icount
+  integer :: ixyzt,ics,jcs
+
+  allocate(  AAe(CLSP/2,CLSP/2,NSITE))
+  allocate(ctmp1(CLSP/2,CLSP/2,NSITE))
+  allocate(d(NSITE))
+
+!$OMP PARALLEL PRIVATE(ics,jcs)
+!$OMP DO
+  do jcs=1,CLSP/2
+  do ics=1,CLSP/2
+    zunit(ics,jcs)=(0.0d0,0.0d0)
+  enddo
+  enddo
+!$OMP END DO
+!$OMP DO
+  do ics=1,CLSP/2
+    zunit(ics,ics)=(1.0d0,0.0d0)
+  enddo
+!$OMP END DO
+!$OMP END PARALLEL
+
+!*****************
+!* set unit matrix for source b
+!*****************
+!$OMP PARALLEL DO PRIVATE(ixyzt,ics,jcs)
+  do ixyzt=1,NSITE
+    do jcs=1,CLSP/2
+    do ics=1,CLSP/2
+      be(ics,jcs,ixyzt)=(0.0d0,0.0d0)
+      AAe(ics,jcs,ixyzt)=Ae(ics,jcs,ixyzt)
+    enddo
+    enddo
+    do ics=1,CLSP/2
+      be(ics,ics,ixyzt)=(1.0d0,0.0d0)
+    enddo
+  enddo
+!$OMP END PARALLEL DO
+
+  call ldl_decomposition(AAe)
+
+!*************************************
+!* calculate det[AAe] when idet = 1.
+!*************************************
+  if (idet.EQ.1) then
+!$OMP PARALLEL DO PRIVATE(ixyzt)
+    do ixyzt=1,NSITE
+      d(ixyzt)=dble(AAe(1,1,ixyzt))  &
+ &            *dble(AAe(2,2,ixyzt))  &
+ &            *dble(AAe(3,3,ixyzt))  &
+ &            *dble(AAe(4,4,ixyzt))  &
+ &            *dble(AAe(5,5,ixyzt))  &
+ &            *dble(AAe(6,6,ixyzt))
+    enddo
+!$OMP END PARALLEL DO
+    logdetAe=0.0d0
+!$OMP PARALLEL DO REDUCTION(+:logdetAe) PRIVATE(ixyzt)
+    do ixyzt=1,NSITE
+      logdetAe=logdetAe+log(d(ixyzt))
+    enddo
+!$OMP END PARALLEL DO
+#ifndef _singlePU
+    call comlib_sumcast(logdetAe)
+#endif
+  endif
+
+!*************************************
+!* calculate b = A^-1
+!*************************************
+  call ldl_solve(AAe,be)
+
+  deallocate(AAe)
+  deallocate(ctmp1)
+  deallocate(d)
+
+  return
+  end subroutine
+
+subroutine ldl_solve(a,b)
+!************************************************************************
+!*  Solve A X = B with LDL^+ decomposed matrix A using forward(backward)
+!*  substitution.
+!*
+!*    a : LDL^+ decomposed matrix
+!*    b : source matrix for input, solution matrix for output
+!*
+!************************************************************************
+  integer, parameter :: dp=KIND(1.0d0)
+  complex(8), intent(in) ::    a(CLSP/2,CLSP/2,NSITE)
+  complex(8), intent(inout) :: b(CLSP/2,CLSP/2,NSITE)
+
+  complex(8) :: zsum
+  real(8) :: rtmp
+  integer :: ics,jcs,kcs,ixyzt
+
+!$OMP PARALLEL DO PRIVATE(ixyzt,ics,jcs,kcs,zsum,rtmp)
+  do ixyzt=1,NSITE
+
+    do ics=2,CLSP/2
+      do jcs=1,CLSP/2
+        zsum = b(ics,jcs,ixyzt)
+        do kcs=1,ics-1
+          ! 8 flop
+          zsum = zsum - a(ics,kcs,ixyzt)*b(kcs,jcs,ixyzt)
+        enddo
+        b(ics,jcs,ixyzt) = zsum
+      enddo
+    enddo
+
+    ! 1 flop
+    rtmp = 1.0_dp/REAL(a(CLSP/2,CLSP/2,ixyzt),kind=dp)
+    do jcs=1,CLSP/2
+      ! 2 flop
+      b(CLSP/2,jcs,ixyzt) = b(CLSP/2,jcs,ixyzt)*rtmp
+    enddo
+
+    do ics=CLSP/2-1,1,-1
+      ! 1 flop
+      rtmp = 1.0_dp/REAL(a(ics,ics,ixyzt),kind=dp)
+      do jcs=1,CLSP/2
+        ! 2 flop
+        zsum = b(ics,jcs,ixyzt)*rtmp
+        do kcs=CLSP/2,ics+1,-1
+          ! 8 flop
+          zsum = zsum - conjg(a(kcs,ics,ixyzt))  &
+ &                           *b(kcs,jcs,ixyzt)
+        enddo
+        b(ics,jcs,ixyzt) = zsum
+      enddo
+    enddo
+  enddo
+!$OMP END PARALLEL DO
+
+  return
+end subroutine
+
+subroutine ldl_decomposition(a)
+!************************************************************************
+!* LDL^+ decomposition
+!*
+!*    a : input matrix to be LDL^+ decomposed
+!*
+!************************************************************************
+  complex(8), intent(inout) :: a(CLSP/2,CLSP/2,NSITE)
+
+  complex(8) :: zsum
+  real(8) :: rsum
+  integer, parameter :: dp=KIND(1.0d0)
+  integer :: ixyzt,ics,jcs,kcs
+
+!$OMP PARALLEL DO PRIVATE(ixyzt,ics,jcs,kcs,rsum,zsum)
+  do ixyzt=1,NSITE
+    do ics=1,CLSP/2
+      ! 1 flop
+      rsum = REAL(a(ics,ics,ixyzt),kind=dp)
+      do kcs=1,ics-1
+        ! 5 flop
+        rsum = rsum - (  real(a(ics,kcs,ixyzt),kind=dp)**2    &
+ &                     +aimag(a(ics,kcs,ixyzt))**2         )  &
+ &                      *real(a(kcs,kcs,ixyzt),kind=dp)
+      enddo
+      a(ics,ics,ixyzt) = cmplx(rsum,0.0_dp,kind=dp)
+
+      do jcs=ics+1,CLSP/2
+        zsum = a(ics,jcs,ixyzt)
+        do kcs=1,ics-1
+          ! 10 flop
+          zsum = zsum - a(ics,kcs,ixyzt)    &
+ &              * conjg(a(jcs,kcs,ixyzt))   &
+ &              *  REAL(a(kcs,kcs,ixyzt),kind=dp)
+        enddo
+        ! 2 flop
+        zsum = conjg(zsum)/REAL(a(ics,ics,ixyzt),kind=dp)
+        a(jcs,ics,ixyzt) = zsum
+      enddo
+    enddo
+
+  enddo
+!$OMP END PARALLEL DO
+
+  return
+end subroutine

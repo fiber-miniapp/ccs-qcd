@@ -1,0 +1,22 @@
+# CCS QCD Miniapp README for HPCI FS
+
+## Evaluation
+
+Both of the two target problem sizes, classes 4 and 5, need to be
+evaluated as a strong-scaling problem. The basic performance
+requirement is that one BiCGStab solver has to be done within 3.1 mili
+sec. The clover routine, while relatively takes minor execution time,
+also need to be at least faster than 20% of the BiCGStab
+solver. Number of nodes, process, and threads can be freely chosen.
+
+Whether these requirements are satisfied is displayed at the end of
+program execution. Below is an example of a class 1 result:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Estimated BiCGStab time for   10000 iteratins :     18.3824
+Upper bound BiCGStab time for 10000 iteratins :     31.0000
+Clover time:                   0.0625
+Upper bound Clover time:       0.0662
+BiCGStab performance requirement: PASS
+Clover performance requirement:   PASS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

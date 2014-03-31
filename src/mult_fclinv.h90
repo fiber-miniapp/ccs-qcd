@@ -1,0 +1,166 @@
+subroutine mult_fclinv(ye,yde,fclinve,ieo)
+!***********************************************************************
+! $Id: mult_fclinv.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
+!                                                 
+! Multiply inverse clover term matrix on fermion vector:
+!
+!   yde = F^-1ee ye
+!
+!      ye : an even/odd site multi boson (ieo=0/1) (input)
+!     yde : an even/odd site multi boson (ieo=0/1) (output)
+! fclinve : even/odd site inverse clover term matrix (chiral rep. linear)
+!     ieo : operate even/odd site
+!           ieo=0 for even site link
+!           ieo=1 for odd  site link
+!
+!***********************************************************************
+  implicit none
+  complex(8), intent(in) ::  ye(COL*SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(out):: yde(COL*SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(in) :: fclinve(CLSPH,0:NTH,NZ,NY,NX,2)
+  integer, intent(in) :: ieo
+!*********
+  complex(8):: a1,a2,a3,a4,a5,a6
+  complex(8):: b1,b2,b3,b4,b5,b6
+  complex(8):: p1,p2,p3,p4,p5,p6
+  complex(8):: m1,m2,m3,m4,m5,m6
+  integer :: ix,iy,iz,itb,ieoxyz
+  complex(8) :: y1,y2,y3,y4,y5,y6,y7,y8,y9,ya,yb,yc
+
+!**********************************************************
+! Calc:
+!        
+!  yde = F^-1ee ye
+!      
+!**********************************************************
+!$OMP PARALLEL DO
+!$& PRIVATE(ix,iy,iz,itb,ieoxyz,
+!$&         a1,a2,a3,a4,a5,a6,b1,b2,b3,b4,b5,b6,
+!$&         p1,p2,p3,p4,p5,p6,m1,m2,m3,m4,m5,m6,
+!$&         y1,y2,y3,y4,y5,y6,y7,y8,y9,ya,yb,yc)
+  do ix=1,NX
+  do iy=1,NY
+  do iz=1,NZ
+    ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+    do itb=1-ieoxyz,NTH-ieoxyz
+
+      y1=ye( 1,itb,iz,iy,ix)
+      y2=ye( 2,itb,iz,iy,ix)
+      y3=ye( 3,itb,iz,iy,ix)
+      y4=ye( 4,itb,iz,iy,ix)
+      y5=ye( 5,itb,iz,iy,ix)
+      y6=ye( 6,itb,iz,iy,ix)
+      y7=ye( 7,itb,iz,iy,ix)
+      y8=ye( 8,itb,iz,iy,ix)
+      y9=ye( 9,itb,iz,iy,ix)
+      ya=ye(10,itb,iz,iy,ix)
+      yb=ye(11,itb,iz,iy,ix)
+      yc=ye(12,itb,iz,iy,ix)
+      p1=y1+y7
+      p2=y2+y8
+      p3=y3+y9
+      p4=y4+ya
+      p5=y5+yb
+      p6=y6+yc
+      m1=y1-y7
+      m2=y2-y8
+      m3=y3-y9
+      m4=y4-ya
+      m5=y5-yb
+      m6=y6-yc
+
+      a1 =       fclinve( 1,itb,iz,iy,ix,2) * p1  &
+ &              +fclinve( 2,itb,iz,iy,ix,2) * p2  &
+ &              +fclinve( 3,itb,iz,iy,ix,2) * p3  &
+ &              +fclinve( 4,itb,iz,iy,ix,2) * p4  &
+ &              +fclinve( 5,itb,iz,iy,ix,2) * p5  &
+ &              +fclinve( 6,itb,iz,iy,ix,2) * p6
+      a2 =dconjg(fclinve( 2,itb,iz,iy,ix,2))* p1  &
+ &              +fclinve( 7,itb,iz,iy,ix,2) * p2  &
+ &              +fclinve( 8,itb,iz,iy,ix,2) * p3  &
+ &              +fclinve( 9,itb,iz,iy,ix,2) * p4  &
+ &              +fclinve(10,itb,iz,iy,ix,2) * p5  &
+ &              +fclinve(11,itb,iz,iy,ix,2) * p6
+      a3 =dconjg(fclinve( 3,itb,iz,iy,ix,2))* p1  &
+ &       +dconjg(fclinve( 8,itb,iz,iy,ix,2))* p2  &
+ &              +fclinve(12,itb,iz,iy,ix,2) * p3  &
+ &              +fclinve(13,itb,iz,iy,ix,2) * p4  &
+ &              +fclinve(14,itb,iz,iy,ix,2) * p5  &
+ &              +fclinve(15,itb,iz,iy,ix,2) * p6
+      a4 =dconjg(fclinve( 4,itb,iz,iy,ix,2))* p1  &
+ &       +dconjg(fclinve( 9,itb,iz,iy,ix,2))* p2  &
+ &       +dconjg(fclinve(13,itb,iz,iy,ix,2))* p3  &
+ &              +fclinve(16,itb,iz,iy,ix,2) * p4  &
+ &              +fclinve(17,itb,iz,iy,ix,2) * p5  &
+ &              +fclinve(18,itb,iz,iy,ix,2) * p6
+      a5 =dconjg(fclinve( 5,itb,iz,iy,ix,2))* p1  &
+ &       +dconjg(fclinve(10,itb,iz,iy,ix,2))* p2  &
+ &       +dconjg(fclinve(14,itb,iz,iy,ix,2))* p3  &
+ &       +dconjg(fclinve(17,itb,iz,iy,ix,2))* p4  &
+ &              +fclinve(19,itb,iz,iy,ix,2) * p5  &
+ &              +fclinve(20,itb,iz,iy,ix,2) * p6
+      a6 =dconjg(fclinve( 6,itb,iz,iy,ix,2))* p1  &
+ &       +dconjg(fclinve(11,itb,iz,iy,ix,2))* p2  &
+ &       +dconjg(fclinve(15,itb,iz,iy,ix,2))* p3  &
+ &       +dconjg(fclinve(18,itb,iz,iy,ix,2))* p4  &
+ &       +dconjg(fclinve(20,itb,iz,iy,ix,2))* p5  &
+ &              +fclinve(21,itb,iz,iy,ix,2) * p6
+
+      b1 =       fclinve( 1,itb,iz,iy,ix,1) * m1  &
+ &              +fclinve( 2,itb,iz,iy,ix,1) * m2  &
+ &              +fclinve( 3,itb,iz,iy,ix,1) * m3  &
+ &              +fclinve( 4,itb,iz,iy,ix,1) * m4  &
+ &              +fclinve( 5,itb,iz,iy,ix,1) * m5  &
+ &              +fclinve( 6,itb,iz,iy,ix,1) * m6
+      b2 =dconjg(fclinve( 2,itb,iz,iy,ix,1))* m1  &
+ &              +fclinve( 7,itb,iz,iy,ix,1) * m2  &
+ &              +fclinve( 8,itb,iz,iy,ix,1) * m3  &
+ &              +fclinve( 9,itb,iz,iy,ix,1) * m4  &
+ &              +fclinve(10,itb,iz,iy,ix,1) * m5  &
+ &              +fclinve(11,itb,iz,iy,ix,1) * m6
+      b3 =dconjg(fclinve( 3,itb,iz,iy,ix,1))* m1  &
+ &       +dconjg(fclinve( 8,itb,iz,iy,ix,1))* m2  &
+ &              +fclinve(12,itb,iz,iy,ix,1) * m3  &
+ &              +fclinve(13,itb,iz,iy,ix,1) * m4  &
+ &              +fclinve(14,itb,iz,iy,ix,1) * m5  &
+ &              +fclinve(15,itb,iz,iy,ix,1) * m6
+      b4 =dconjg(fclinve( 4,itb,iz,iy,ix,1))* m1  &
+ &       +dconjg(fclinve( 9,itb,iz,iy,ix,1))* m2  &
+ &       +dconjg(fclinve(13,itb,iz,iy,ix,1))* m3  &
+ &              +fclinve(16,itb,iz,iy,ix,1) * m4  &
+ &              +fclinve(17,itb,iz,iy,ix,1) * m5  &
+ &              +fclinve(18,itb,iz,iy,ix,1) * m6
+      b5 =dconjg(fclinve( 5,itb,iz,iy,ix,1))* m1  &
+ &       +dconjg(fclinve(10,itb,iz,iy,ix,1))* m2  &
+ &       +dconjg(fclinve(14,itb,iz,iy,ix,1))* m3  &
+ &       +dconjg(fclinve(17,itb,iz,iy,ix,1))* m4  &
+ &              +fclinve(19,itb,iz,iy,ix,1) * m5  &
+ &              +fclinve(20,itb,iz,iy,ix,1) * m6
+      b6 =dconjg(fclinve( 6,itb,iz,iy,ix,1))* m1  &
+ &       +dconjg(fclinve(11,itb,iz,iy,ix,1))* m2  &
+ &       +dconjg(fclinve(15,itb,iz,iy,ix,1))* m3  &
+ &       +dconjg(fclinve(18,itb,iz,iy,ix,1))* m4  &
+ &       +dconjg(fclinve(20,itb,iz,iy,ix,1))* m5  &
+ &              +fclinve(21,itb,iz,iy,ix,1) * m6
+
+      yde( 1,itb,iz,iy,ix) = a1 + b1
+      yde( 2,itb,iz,iy,ix) = a2 + b2
+      yde( 3,itb,iz,iy,ix) = a3 + b3
+      yde( 4,itb,iz,iy,ix) = a4 + b4
+      yde( 5,itb,iz,iy,ix) = a5 + b5
+      yde( 6,itb,iz,iy,ix) = a6 + b6
+      yde( 7,itb,iz,iy,ix) = a1 - b1
+      yde( 8,itb,iz,iy,ix) = a2 - b2
+      yde( 9,itb,iz,iy,ix) = a3 - b3
+      yde(10,itb,iz,iy,ix) = a4 - b4
+      yde(11,itb,iz,iy,ix) = a5 - b5
+      yde(12,itb,iz,iy,ix) = a6 - b6
+
+    enddo
+
+  enddo
+  enddo
+  enddo ! end of do ix,iy,iz
+
+  return
+end subroutine

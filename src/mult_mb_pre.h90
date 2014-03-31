@@ -1,0 +1,70 @@
+subroutine mult_mb_pre(kappa,ye,yde,ue,uo,ieo,fclinve,fclinvo)
+!***********************************************************************
+! $Id: mult_mb_pre.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
+!                                                               v
+! Multiply site red/black preconditioned Dirac operator : yde = Dee ye,
+! where  v
+!        Dee = 1ee - kappa^2 (Fee^-1 Meo)(Foo^-1 Moe)
+!
+!   kappa : hopping parameter
+!      ye : even/odd site quark field (ieo=0/1) (input)
+!     yde : even/odd site quark field (ieo=0/1) (output)
+!      ue : even/odd site gauge link (ieo=0/1)
+!      uo : odd/even site gauge link (ieo=0/1)
+!     ieo : operation index
+!             ieo=0 for even site
+!             ieo=1 for  odd site
+! fclinve : even/odd site inverse clover term (ieo=0/1) (chiral rep. linear form)
+! fclinvo : odd/even site inverse clover term (ieo=0/1) (chiral rep. linear form)
+!
+!***********************************************************************
+  implicit none
+  real(8), intent(in) :: kappa
+  integer, intent(in) :: ieo
+  complex(8), intent(in) :: ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(in) :: uo(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(inout) :: ye(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(out):: yde(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(in) :: fclinve(CLSPH,0:NTH,NZ,NY,NX,2)
+  complex(8), intent(in) :: fclinvo(CLSPH,0:NTH,NZ,NY,NX,2)
+!************
+  complex(8) :: Myo(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  real(8) :: kappa2
+  integer :: ix,iy,iz,itb,ieoxyz,ic,is
+
+  kappa2=kappa**2
+
+!**********************************
+!  Myo = Foo^-1 Moe ye
+!**********************************
+  call mult(ye,Myo,uo,ue,mod(ieo+1,2),fclinvo)
+
+!**********************************
+!  yde = Fee^-1 Meo Myo
+!      = Fee^-1 Meo Foo^-1 Moe ye
+!**********************************
+  call mult(Myo,yde,ue,uo,ieo,fclinve)
+
+!**************************************************
+!  yde = ye - kappa^2 yde
+!      = ye - kappa^2 Fee^-1 Meo Foo^-1 Moe ye
+!**************************************************
+!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,ic,is)
+  do ix=1,NX
+  do iy=1,NY
+  do iz=1,NZ
+    ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+    do itb=1-ieoxyz,NTH-ieoxyz
+      do is=1,SPIN
+      do ic=1,COL
+        yde(ic,is,itb,iz,iy,ix)=ye(ic,is,itb,iz,iy,ix)  &
+ &                     -kappa2*yde(ic,is,itb,iz,iy,ix)
+      enddo
+      enddo
+    enddo
+  enddo
+  enddo
+  enddo ! end of do ix,iy,iz
+
+  return
+end subroutine

@@ -1,0 +1,71 @@
+#define _X_ itb,iz,iy,ix
+  subroutine init_u_and_y(ue,uo,ye,yo)
+!***********************************************************************
+!$Id: init_u_and_y.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
+!***********************************************************************
+  implicit none
+  complex(8), intent(inout):: ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(inout):: uo(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(inout):: ye(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(inout):: yo(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+!************
+  complex(8), allocatable :: pe(:,:,:,:,:,:,:)
+  complex(8), allocatable :: po(:,:,:,:,:,:,:)
+  real(8) :: dt
+  integer :: mu,ix,iy,iz,ieoxyz,itb,ic,jc
+
+  ir=12345
+  dt=0.1d0
+
+!$OMP PARALLEL DO PRIVATE(mu,ix,iy,iz,ieoxyz,itb,ic,jc)
+  do mu=1,NDIM
+  do ix=1,NX
+  do iy=1,NY
+  do iz=1,NZ
+    ieoxyz=mod(ipeo+ix+iy+iz,2)
+    do itb=1-ieoxyz,NTH-ieoxyz
+      do jc=1,COL
+      do ic=1,COL
+        ue(ic,jc,_X_,mu)=(0.0d0,0.0d0)
+      enddo
+      enddo
+      do ic=1,COL
+        ue(ic,ic,_X_,mu)=(1.0d0,0.0d0)
+      enddo
+    enddo
+
+    do itb=ieoxyz,NTH+ieoxyz-1
+      do jc=1,COL
+      do ic=1,COL
+        uo(ic,jc,_X_,mu)=(0.0d0,0.0d0)
+      enddo
+      enddo
+      do ic=1,COL
+        uo(ic,ic,_X_,mu)=(1.0d0,0.0d0)
+      enddo
+    enddo
+  enddo
+  enddo
+  enddo
+  enddo
+
+  allocate(pe(COL,COL,0:NTH,NZ,NY,NX,NDIM))
+  allocate(po(COL,COL,0:NTH,NZ,NY,NX,NDIM))
+  call init_p(pe,po)
+  call expp_u(dt,pe,ue,0)
+  deallocate(pe)
+  call expp_u(dt,po,uo,1)
+  deallocate(po)
+  call gauss_y(ye,0)
+  call gauss_y(yo,1)
+
+  call copy_y(ye,0)
+  call copy_y(yo,1)
+  do mu=1,NDIM
+    call copy_u(ue,mu,0)
+    call copy_u(uo,mu,1)
+  enddo
+
+  return
+end subroutine
+#undef _X_

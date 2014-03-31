@@ -1,0 +1,99 @@
+subroutine gauss_y(ye,ieo)
+!***********************************************************************
+!$Id: gauss_y.h90,v 1.2 2009/12/04 14:42:27 ishikawa Exp $
+! Generate gaussian noize vector for single boson
+!
+!   ye: even/odd site vector
+! ieo : 0 for even, 1 for odd
+!
+!***********************************************************************
+  implicit none
+  integer :: NCSTB
+  parameter (NCSTB=COL*SPIN*NTH)
+  integer, intent(in) :: ieo
+  complex(8), intent(out) :: ye(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  real(8) :: pi2
+  real(8) :: yr(NCSTB),cth(NCSTB),sth(NCSTB)
+  integer :: ix,iy,iz,itb,ieoxyz,is,icstb
+  integer :: ic,ixx,iyy,izz,ipx,ipy,ipz
+  real(8) :: rtmp
+  real(8), allocatable :: tth(:,:,:,:)
+  real(8), allocatable :: tyr(:,:,:,:)
+
+!  allocate(tth(NCSTB,NTZ,NTY,NTX))
+!  allocate(tyr(NCSTB,NTZ,NTY,NTX))
+  allocate(tth(NCSTB,NZ,NY,NX))
+  allocate(tyr(NCSTB,NZ,NY,NX))
+
+  pi2=8.0d0*datan(1.0d0)
+
+!**********************************
+! Set auxiliary field with 
+! Gaussian distribution using 
+! standerd FORTRAN90 intrinsic
+! subroutine random_number.
+!
+! Programmed independent on
+! parallelization size.
+!**********************************
+  do ixx=1,NTX
+  do iyy=1,NTY
+  do izz=1,NTZ
+    ix = mod(ixx-1,NX)+1
+    iy = mod(iyy-1,NY)+1
+    iz = mod(izz-1,NZ)+1
+    ipx = (ixx-1)/NX
+    ipy = (iyy-1)/NY
+    ipz = (izz-1)/NZ
+    do icstb=1,NCSTB
+      call xrand(ir,rtmp)
+      if (ipx==ipsite(1).AND.ipy==ipsite(2).AND.ipz==ipsite(3)) then
+        tyr(icstb,iz,iy,ix)=rtmp
+      endif
+!      tyr(icstb,izz,iyy,ixx)=rtmp
+      call xrand(ir,rtmp)
+      if (ipx==ipsite(1).AND.ipy==ipsite(2).AND.ipz==ipsite(3)) then
+        tth(icstb,iz,iy,ix)=rtmp
+      endif
+!      tth(icstb,izz,iyy,ixx)=rtmp
+    enddo
+  enddo
+  enddo
+  enddo
+
+!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ixx,iyy,izz,ic,is,icstb,yr,cth,sth)
+  do ix=1,NX
+  do iy=1,NY
+  do iz=1,NZ
+    ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+    ixx = ix + ipsite(1)*NX
+    iyy = iy + ipsite(2)*NY
+    izz = iz + ipsite(3)*NZ
+
+    do icstb=1,NCSTB
+       yr(icstb)=   &
+ &          DSQRT(-DLOG(dble(tyr(icstb,iz,iy,ix))))
+      cth(icstb) = dcos(dble(tth(icstb,iz,iy,ix)*pi2))
+      sth(icstb) = dsin(dble(tth(icstb,iz,iy,ix)*pi2))
+!       yr(icstb)=   &
+! &          DSQRT(-DLOG(dble(tyr(icstb,izz,iyy,ixx))))
+!      cth(icstb) = dcos(dble(tth(icstb,izz,iyy,ixx)*pi2))
+!      sth(icstb) = dsin(dble(tth(icstb,izz,iyy,ixx)*pi2))
+    enddo
+    do itb=1-ieoxyz,NTH-ieoxyz
+      do is=1,SPIN
+      do ic=1,COL
+        ye(ic,is,itb,iz,iy,ix)=yr(ic+COL*(is-1)+CLSP*(itb+ieoxyz-1))*   &
+ &                     dcmplx(cth(ic+COL*(is-1)+CLSP*(itb+ieoxyz-1)),   &
+ &                            sth(ic+COL*(is-1)+CLSP*(itb+ieoxyz-1)))
+      enddo
+      enddo
+    enddo
+  enddo
+  enddo
+  enddo
+
+  deallocate(tth,tyr)
+
+  return
+end subroutine

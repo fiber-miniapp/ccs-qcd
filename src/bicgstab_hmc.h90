@@ -1,0 +1,363 @@
+subroutine bicgstab_hmc(tol,iiter,flopcount,stcount, ldcount, &
+   &                        etime,  &
+   &                        kappa,be,xe,ue,uo,ieo,  &
+   &                        fclinve,fclinvo)
+!***********************************************************************
+! $Id: bicgstab_hmc.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
+!
+! BiCGStab
+!  Solve:  D x = b -> x = D^-1 b
+!
+!       tol : BiCGstab stopping condition
+!     iiter : total number of iteration after convergence
+! flopcount : double precision flop count
+! stcount   : double precision store count
+! ldcount   : double precision load count
+!     etime : double precision computation time
+!     kappa : hopping parameter
+!        be : even/odd site source quark field  (ieo=0/1)
+!        xe : even/odd site solution quark field (ieo=0/1)
+!        ue : even/odd site gauge link (ieo=0/1)
+!        uo : odd/even site gauge link (ieo=0/1)
+!       ieo : operation index
+!               ieo=0 for even site
+!               ieo=1 for odd  site
+!   fclinve : even/odd site inverse clover term (ieo=0/1)
+!   fclinvo : odd/even site inverse clover term (ieo=0/1)
+!
+!***********************************************************************
+  implicit none
+!**********
+  real(8), intent(in)  :: tol
+  integer, intent(out) :: iiter
+  real(8), intent(out) :: flopcount, stcount, ldcount, etime
+  real(8), intent(in) :: kappa
+  complex(8), intent(in)   :: be(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(inout):: xe(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(in) :: ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(in) :: uo(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  integer, intent(in) :: ieo
+  complex(8), intent(in):: fclinve(CLSPH,0:NTH,NZ,NY,NX,2)
+  complex(8), intent(in):: fclinvo(CLSPH,0:NTH,NZ,NY,NX,2)
+!**********
+  complex(8), allocatable :: rte(:,:,:,:,:,:)
+  complex(8), allocatable ::  pe(:,:,:,:,:,:)
+  complex(8), allocatable ::  te(:,:,:,:,:,:)
+  complex(8), allocatable ::  qe(:,:,:,:,:,:)
+  complex(8), allocatable ::  re(:,:,:,:,:,:)
+  integer :: iter,niter,CHKFLG
+  integer :: ix,iy,iz,itb,ic,is,ieoxyz,ioe
+  complex(8) :: rho1,rho0,beta,omega,alpha
+  complex(8) :: ctmp0
+  real(8) :: rnorm,rtmp0,rsource,precnorm,stol,err
+  real(8) :: etime0,etime1
+  integer, parameter :: iout=_FILE_IO_BICGSTAB_HMC
+
+  allocate(rte(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1))
+  allocate( pe(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1))
+  allocate( te(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1))
+  allocate( qe(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1))
+  allocate( re(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1))
+
+  call xclock(etime0,8)
+  CHKFLG=1
+  flopcount=0.0d0
+  stcount=0.0d0
+  ldcount=0.0d0
+
+  ioe=mod(ieo+1,2)
+
+
+!***********************************
+! precondition (ipre=1)
+!***********************************
+
+  niter = 5000
+
+!*******
+!  rsource = ||b||
+!  x = 0
+!  r = b
+!  rt = r
+!  p = r
+!********
+  rtmp0=0.0d0
+!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ic,is) REDUCTION(+:rtmp0)
+  do ix=1,NX
+  do iy=1,NY
+  do iz=1,NZ
+    ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+#ifdef _SF
+    do itb=1,NTH-ieoxyz
+#else
+    do itb=1-ieoxyz,NTH-ieoxyz
+#endif
+      do is=1,SPIN
+      do ic=1,COL
+         rtmp0=rtmp0+ real(be(ic,is,itb,iz,iy,ix))**2  &
+ &                  +aimag(be(ic,is,itb,iz,iy,ix))**2
+         xe(ic,is,itb,iz,iy,ix)=(0.0d0,0.0d0)
+         re(ic,is,itb,iz,iy,ix)=be(ic,is,itb,iz,iy,ix)
+        rte(ic,is,itb,iz,iy,ix)=be(ic,is,itb,iz,iy,ix)
+         pe(ic,is,itb,iz,iy,ix)=be(ic,is,itb,iz,iy,ix)
+      enddo
+      enddo
+    enddo
+  enddo
+  enddo
+  enddo
+#ifndef _singlePU
+  call comlib_sumcast(rtmp0)
+#endif
+  rsource=sqrt(rtmp0)
+  flopcount=flopcount+QABS2
+  stcount=stcount+COL*SPIN*4
+  ldcount=ldcount+COL*SPIN
+
+  iter=0
+
+!********************
+!  rho0 = <rt|r>
+!  rnorm = |r|/|b|
+!********************
+  rho0 = cmplx(rsource**2,0.0d0,kind=KIND(rho0))
+  rnorm= 1.0d0
+#ifdef _VERBOSE      
+  if (nodeid==0) then
+    if (CHKFLG==1) write(*,'("#",I5," ERR:",E24.16)')iter,rnorm
+    write(iout,'("#",I5," ERR:",E24.16)')iter,rnorm
+  endif
+#endif
+      
+  do while (iter <= niter)
+
+!*************
+!  q = D p
+!*************
+    call mult_mb_pre(kappa,pe,qe,ue,uo,ieo,fclinve,fclinvo)
+    flopcount=flopcount+MULT_MB_PRE
+    ldcount=ldcount+COL*SPIN+COL*COL*4*2+CLSPH*2
+    stcount=stcount+COL*SPIN
+    iter = iter + 1
+
+!*******************
+!  ctmp0 = <rt|q>
+!*******************
+    ctmp0=(0.0d0,0.0d0)
+!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ic,is) REDUCTION(+:ctmp0)
+    do ix=1,NX
+    do iy=1,NY
+    do iz=1,NZ
+      ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+      do itb=1-ieoxyz,NTH-ieoxyz
+        do is=1,SPIN
+        do ic=1,COL
+          ctmp0=ctmp0 +conjg(rte(ic,is,itb,iz,iy,ix))*  &
+   &                          qe(ic,is,itb,iz,iy,ix)
+        enddo
+        enddo
+      enddo
+    enddo
+    enddo
+    enddo
+#ifndef _singlePU
+  call comlib_sumcast(ctmp0)
+#endif
+    alpha=rho0/ctmp0
+    flopcount=flopcount+QPROD
+    ldcount=ldcount+COL*SPIN*2
+
+!*********************
+! x = x + alpha p
+! r = r - alpha q
+! rtmp0 = |r|
+!**************
+    rtmp0 = 0.0d0
+!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ic,is) REDUCTION(+:rtmp0)
+    do ix=1,NX
+    do iy=1,NY
+    do iz=1,NZ
+      ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+      do itb=1-ieoxyz,NTH-ieoxyz
+        do is=1,SPIN
+        do ic=1,COL
+          xe(ic,is,itb,iz,iy,ix)=xe(ic,is,itb,iz,iy,ix)  &
+   &                      +alpha*pe(ic,is,itb,iz,iy,ix)
+          re(ic,is,itb,iz,iy,ix)=re(ic,is,itb,iz,iy,ix)  &
+   &                      -alpha*qe(ic,is,itb,iz,iy,ix)
+          rtmp0=rtmp0+ real(re(ic,is,itb,iz,iy,ix))**2  &
+   &                 +aimag(re(ic,is,itb,iz,iy,ix))**2
+        enddo
+        enddo
+      enddo
+    enddo
+    enddo
+    enddo
+#ifndef _singlePU
+    call comlib_sumcast(rtmp0)
+#endif
+    flopcount=flopcount+QABS2+2*QMULT1C_ACCUM_ADD
+    ldcount=ldcount+COL*SPIN*4
+    stcount=stcount+COL*SPIN*2
+
+    rnorm=sqrt(rtmp0)/rsource
+#ifdef _VERBOSE      
+    if (nodeid==0) then
+      if (CHKFLG==1) write(*,'("#",I5," ERR:",E24.16)')iter,rnorm
+      write(iout,'("#",I5," ERR:",E24.16)')iter,rnorm
+    endif
+#endif
+
+    if ( rnorm <= tol ) then
+      call xclock(etime1,8)
+      if (nodeid == 0) then
+        write(iout,'("BiCGStab iteration converged.")')
+        write(iout,'("#",I5," ERR =",E24.16," ETIME =",E24.16)')iter,rnorm,etime1-etime0
+      endif
+      exit
+    endif
+
+!**************
+!  t = D r
+!**************
+    call mult_mb_pre(kappa,re,te,ue,uo,ieo,fclinve,fclinvo)
+    iter = iter + 1
+    flopcount=flopcount+MULT_MB_PRE
+    ldcount=ldcount+COL*SPIN+COL*COL*4*2+CLSPH*2
+    stcount=stcount+COL*SPIN
+
+!******************
+!  rtmp0 = <t|t>
+!  ctmp0 = <t|r>
+!******************
+    rtmp0=0.0d0
+    ctmp0=(0.0d0,0.0d0)
+!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ic,is) REDUCTION(+:rtmp0,ctmp0)
+    do ix=1,NX
+    do iy=1,NY
+    do iz=1,NZ
+      ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+      do itb=1-ieoxyz,NTH-ieoxyz
+        do is=1,SPIN
+        do ic=1,COL
+          rtmp0=rtmp0 + real(te(ic,is,itb,iz,iy,ix))**2  &
+   &                  +aimag(te(ic,is,itb,iz,iy,ix))**2
+          ctmp0=ctmp0 +conjg(te(ic,is,itb,iz,iy,ix))*    &
+   &                         re(ic,is,itb,iz,iy,ix)
+        enddo
+        enddo
+      enddo
+    enddo
+    enddo
+    enddo
+#ifndef _singlePU
+    call comlib_sumcast(rtmp0)
+    call comlib_sumcast(ctmp0)
+#endif
+    flopcount=flopcount+QABS2+QPROD
+    ldcount=ldcount+COL*SPIN*3
+
+    omega=ctmp0/rtmp0
+!***********************
+!  x = x + omega r
+!  r = r - omega t
+! rtmp0 = |r|
+! rho1 = <rt|r>
+!***********************
+    rtmp0 = 0.0d0
+    rho1  =(0.0d0,0.0d0)
+!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ic,is) REDUCTION(+:rtmp0,rho1)
+    do ix=1,NX
+    do iy=1,NY
+    do iz=1,NZ
+      ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+      do itb=1-ieoxyz,NTH-ieoxyz
+        do is=1,SPIN
+        do ic=1,COL
+          xe(ic,is,itb,iz,iy,ix)=xe(ic,is,itb,iz,iy,ix)   &
+   &                      +omega*re(ic,is,itb,iz,iy,ix)
+          re(ic,is,itb,iz,iy,ix)=re(ic,is,itb,iz,iy,ix)   &
+   &                      -omega*te(ic,is,itb,iz,iy,ix)
+          rho1 =rho1 + conjg(rte(ic,is,itb,iz,iy,ix))     &
+   &                         *re(ic,is,itb,iz,iy,ix)
+          rtmp0=rtmp0  + real(re(ic,is,itb,iz,iy,ix))**2  &
+   &                   +aimag(re(ic,is,itb,iz,iy,ix))**2
+        enddo
+        enddo
+      enddo
+    enddo
+    enddo
+    enddo
+#ifndef _singlePU
+    call comlib_sumcast(rtmp0)
+    call comlib_sumcast(rho1)
+#endif
+    flopcount=flopcount+QABS2+QPROD+2*QMULT1C_ACCUM_ADD
+    ldcount=ldcount+COL*SPIN*4
+    stcount=stcount+COL*SPIN*2
+
+    rnorm=sqrt(rtmp0)/rsource
+#ifdef _VERBOSE      
+    if (nodeid==0) then
+      if (CHKFLG==1) write(*,'("#",I5," ERR:",E24.16)')iter,rnorm
+      write(iout,'("#",I5," ERR:",E24.16)')iter,rnorm
+    endif
+#endif      
+
+    if ( rnorm <= tol ) then
+      call xclock(etime1,8)
+      if (nodeid == 0) then
+        write(iout,'("BiCGStap iteration converged.")')
+        write(iout,'("#",I5," ERR =",E24.16," ETIME =",E24.16)')iter,rnorm,etime1-etime0
+      endif
+      exit
+    endif
+
+    beta = (rho1/rho0)*(alpha/omega)
+    rho0 = rho1
+
+!*************************
+! p=r+beta(p - omega q)
+!*************************
+!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ic,is)
+    do ix=1,NX
+    do iy=1,NY
+    do iz=1,NZ
+      ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+      do itb=1-ieoxyz,NTH-ieoxyz
+        do is=1,SPIN
+        do ic=1,COL
+          pe(ic,is,itb,iz,iy,ix)=re(ic,is,itb,iz,iy,ix)   &
+   &               +beta*(       pe(ic,is,itb,iz,iy,ix)   &
+   &                      -omega*qe(ic,is,itb,iz,iy,ix) )
+        enddo
+        enddo
+      enddo
+    enddo
+    enddo
+    enddo
+    flopcount=flopcount+2*QMULT1C_ACCUM_ADD
+    ldcount=ldcount+COL*SPIN*3
+    stcount=stcount+COL*SPIN
+
+  enddo
+
+  iiter = iter
+  flopcount=flopcount*dble(NTH*NZ*NY*NX)
+  ldcount=ldcount*dble(NTH*NZ*NY*NX)*2.0d0
+  stcount=stcount*dble(NTH*NZ*NY*NX)*2.0d0
+  call xclock(etime1,8)
+  etime = etime1-etime0
+  deallocate(rte,pe,te,qe,re)
+  if ( iter >= niter ) then
+    call xclock(etime1,8)
+    if (nodeid.EQ.0) then
+      write(iout,'("BiCGStab iteration does not converge.")')
+      write(iout,'("#",I5," ERR =",E24.16," ETIME =",E24.16)')iter,rnorm,etime1-etime0
+    endif
+    stop
+  endif
+
+
+  return
+end subroutine

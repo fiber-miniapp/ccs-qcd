@@ -1,0 +1,66 @@
+
+---------------------------------
+[INFO] PLE 1700 The job restarts.
+---------------------------------
+
+Env_base: K-1.2.0-11
+================================================================================
+ CCS QCD Solver Benchmark Program
+ CCS-QCDSolverBench-v0.92
+ Last Changed Author: kishika Rev: 14 Date: 2012-09-25 12:10:03 +0900 (Tue, 25 Sep 2012)
+    Lattice Size :160160160 160
+ Node Array Size : 20 20 20
+ PU Lattice Size :  8  8  8  80*2
+           Kappa :      0.124000
+             CSW :      1.000000
+             Tol :  0.100000E-12
+================================================================================
+ 
+  Sum[Log[Det[F[n]]],n] =  -4623403.508180954
+ 
+ Check sum U: (7759898059.047084,177.9316726042153)
+ Check sum Y: (-1588.608402183970,344.9296780168642)
+ Check sum U: (7759898059.047084,177.9316726042153)
+ Check sum Y: (-1588.608402183970,344.9296780168642)
+  Iter =   352
+   Res =    0.905044861914651E-13
+|YDE|^2=    0.409077349818520E+10
+================================================================================
+  Clover + Clover_inv Performance.
+           Flop [MFlop/node] :   1276.5455
+          Elapsed Time [sec] :      1.0214
+Performance [MFlop/sec/node] :   1249.8265
+--------------------------------------------------------------------------------
+  BiCGStab(CPU:double precision) Performance.
+           Flop [MFlop/node] :  62625.5462
+          Elapsed Time [sec] :      5.9184
+Performance [MFlop/sec/node] :  10581.4702
+      Full Copy_y Time [sec] :      1.8514
+    MPI Commun. SizeX[Mbyte] :   1344.0938
+    MPI Commun. TimeX  [sec] :      0.3379
+    MPI Commun. BandX [MB/s] :   3977.4353
+    MPI Commun. SizeY[Mbyte] :   1344.0938
+    MPI Commun. TimeY  [sec] :      0.3418
+    MPI Commun. BandY [MB/s] :   3932.0377
+    MPI Commun. SizeZ[Mbyte] :   1344.0938
+    MPI Commun. TimeZ  [sec] :      0.3292
+    MPI Commun. BandZ [MB/s] :   4082.6251
+--------------------------------------------------------------------------------
+  BiCGStab Total
+          Elapsed Time [sec] :      5.9211
+================================================================================
+Clover + Clover_inv Time:                                1.021 (S)
+Clover + Clover_inv FLOPS:                               1.250 (GFLOPS)
+Clover + Clover_inv Throughput:                        UNKNOWN
+Clover + Clover_inv Effective Throughput:              UNKNOWN
+BiCGStab Total Time:                                5.921 (S)
+BiCGStab Total FLOPS:                              10.577 (GFLOPS)
+BiCGStab Total Throughput:                        UNKNOWN
+BiCGStab Total Effective Throughput:              UNKNOWN
+================================================================================
+Estimated BiCGStab time for   10000 iteratins :    168.1368
+Upper bound BiCGStab time for 10000 iteratins :     31.0000
+Clover time:                   1.0214
+Upper bound Clover time:       0.6032
+BiCGStab performance requirement: FAIL
+Clover performance requirement:   FAIL

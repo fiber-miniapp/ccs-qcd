@@ -1,0 +1,23 @@
+Exascale target size (example)
+
+Case 1:
+#define _NTX  160
+#define _NTY  160
+#define _NTZ  160
+#define _NTT  160
+
+#define _NDIMX  20
+#define _NDIMY  20
+#define _NDIMZ  20
+
+Case 2:
+#define _NTX  256
+#define _NTY  256
+#define _NTZ  256
+#define _NTT  256
+
+#define _NDIMX  32
+#define _NDIMY  32
+#define _NDIMZ  32
+
+These examples fix the local spatial volume to 8^3.

@@ -1,0 +1,72 @@
+#define _X_    itb,iz,iy,ix
+subroutine output(ue,uo,ye,yo)
+!***********************************************************************
+!$Id: output.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
+! Output fermion vector complex sum all.
+!
+!   ye : even site fermion vector
+!   yo : odd site fermion vector
+!
+!***********************************************************************
+  implicit none
+  complex(8), intent(in) :: ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(in) :: uo(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(in) :: ye(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(in) :: yo(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  integer :: ix,iy,iz,itb,ieoxyz,ic,is,jc,mu
+  complex(8) :: sum_u,sum_f
+
+  sum_u=(0.0d0,0.0d0)
+  sum_f=(0.0d0,0.0d0)
+  do ix=1,NX
+  do iy=1,NY
+  do iz=1,NZ
+    ieoxyz=mod(ipeo+ix+iy+iz,2)
+
+    do itb=1-ieoxyz,NTH-ieoxyz
+      do mu=1,NDIM
+      do jc=1,COL
+      do ic=1,COL
+        sum_u=sum_u+ue(ic,jc,_X_,mu)
+      enddo
+      enddo
+      enddo
+      do is=1,SPIN
+      do ic=1,COL
+        sum_f=sum_f+ye(ic,is,_X_)
+      enddo
+      enddo
+    enddo
+
+    do itb=ieoxyz,NTH-1+ieoxyz
+      do mu=1,NDIM
+      do jc=1,COL
+      do ic=1,COL
+        sum_u=sum_u+uo(ic,jc,_X_,mu)
+      enddo
+      enddo
+      enddo
+      do is=1,SPIN
+      do ic=1,COL
+        sum_f=sum_f+yo(ic,is,_X_)
+      enddo
+      enddo
+    enddo
+
+  enddo
+  enddo
+  enddo ! end of do ix,iy,iz
+
+#ifndef _singlePU
+  call comlib_sumcast(sum_u)
+  call comlib_sumcast(sum_f)
+#endif
+
+  if (nodeid==0) then
+  write(*,*)"Check sum U:",sum_u
+  write(*,*)"Check sum Y:",sum_f
+  endif
+
+  return
+end subroutine
+#undef _X_
