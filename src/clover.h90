@@ -64,7 +64,7 @@
     iylow = 1-isy(mu)-isy(nu)
     izlow = 1-isz(mu)-isz(nu)
     itlow = 1-ist(mu)-ist(nu)
-!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ic,jc,ix2,iy2,iz2,itb2,ix4,iy4,iz4,itb4)
+!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ic,jc,ix2,iy2,iz2,itb2,ix4,iy4,iz4,itb4) COLLAPSE(2)
     do ix=ixlow,NX
     do iy=iylow,NY
     do iz=izlow,NZ
@@ -159,7 +159,7 @@
     iyhig = NY+isy(nu)
     izhig = NZ+isz(nu)
     ithig = 1-ist(nu)
-!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ic,jc,ix5,iy5,iz5,itb5,ix6,iy6,iz6,itb6)
+!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ic,jc,ix5,iy5,iz5,itb5,ix6,iy6,iz6,itb6) COLLAPSE(2)
     do ix=ixlow,ixhig
     do iy=iylow,iyhig
     do iz=izlow,izhig
@@ -253,6 +253,8 @@
 !     --->---  3--->---
 !
 !***********************************************************************
+!$OMP PARALLEL PRIVATE(ix,iy,iz,ieoxyz,itb,ic,jc,vo,ve,itb0,ix1,iy1,iz1,itb1,ix2,iy2,iz2,itb2,ix3,iy3,iz3,itb3)
+!$OMP DO COLLAPSE(2)
     do ix=1,NX
     do iy=1,NY
     do iz=1,NZ
@@ -335,6 +337,8 @@
     enddo
     enddo
     enddo ! end of do ix,iy,iz
+!$OMP END DO
+!$OMP END PARALLEL
 
   enddo ! end of do nu
   enddo ! end of do mu
