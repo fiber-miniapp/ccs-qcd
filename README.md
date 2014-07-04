@@ -58,13 +58,6 @@ Move to the src directory first. The standard method of compilation is
 to use make as follows: 
 
     make MAKE_INC=<make-sysdep-file> CLASS=<problem-class>
-
-If this package is obtained by cloning the git repository, git
-submodule may also need to be updated at the top-level directory as
-follows:
-
-    git submodule init
-    git submodule update
     
 Once the compilation finishes, an executable file named
 `ccs_qcd_solver_bench_classN`, where `N` is the problem class number,
@@ -154,4 +147,9 @@ exceptions:
 * [v1.0 (March 31,
   2014)](http://github.com/fiber-miniapp/ccs-qcd/tree/1.0)
     - Initial release
+
+* [v1.1 (July 5,
+  2014)](http://github.com/fiber-miniapp/ccs-qcd/tree/1.1)
+    - Update clover.h90 and make.fx10.inc
+
   
