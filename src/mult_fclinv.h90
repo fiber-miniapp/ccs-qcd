@@ -33,11 +33,11 @@ subroutine mult_fclinv(ye,yde,fclinve,ieo)
 !  yde = F^-1ee ye
 !      
 !**********************************************************
-!$OMP PARALLEL DO
-!$& PRIVATE(ix,iy,iz,itb,ieoxyz,
-!$&         a1,a2,a3,a4,a5,a6,b1,b2,b3,b4,b5,b6,
-!$&         p1,p2,p3,p4,p5,p6,m1,m2,m3,m4,m5,m6,
-!$&         y1,y2,y3,y4,y5,y6,y7,y8,y9,ya,yb,yc)
+!$OMP PARALLEL DO &
+!$OMP& PRIVATE(ix,iy,iz,itb,ieoxyz, &
+!$OMP&         a1,a2,a3,a4,a5,a6,b1,b2,b3,b4,b5,b6, &
+!$OMP&         p1,p2,p3,p4,p5,p6,m1,m2,m3,m4,m5,m6, &
+!$OMP&         y1,y2,y3,y4,y5,y6,y7,y8,y9,ya,yb,yc)
   do ix=1,NX
   do iy=1,NY
   do iz=1,NZ

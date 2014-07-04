@@ -7,7 +7,7 @@ REVISION = -D_REVISION_='"$(shell cat .svnrevision)"'
 #
 
 FC = mpifrtpx
-FFLAGS = -Kfast,openmp
+FFLAGS = -Kfast,openmp -KXFILL -Kprefetch_sequential=soft  -Kprefetch_double_line_L2 -Kprefetch
 
 CC = mpifccpx
 
