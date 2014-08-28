@@ -152,4 +152,7 @@ exceptions:
   2014)](http://github.com/fiber-miniapp/ccs-qcd/tree/1.1)
     - Update clover.h90 and make.fx10.inc
 
+* [v1.1.1 (August 28,
+  2014)](http://github.com/fiber-miniapp/ccs-qcd/tree/1.1.1)
+    - Fix file permission
   
