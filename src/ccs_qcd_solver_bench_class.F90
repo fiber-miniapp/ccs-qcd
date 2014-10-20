@@ -48,6 +48,7 @@ contains
 #include "initset.h90"
 #include "mult.h90"
 #include "mult_eo_tzyx.h90"
+#include "mult_eo_tzyx_openacc.h90"
 #include "mult_fclinv.h90"
 #include "mult_mb_pre.h90"
 #include "output.h90"

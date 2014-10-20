@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
+#include "config.h"
 #include "maprof_proc.h"
 
 #define BUF_SIZE 1024
@@ -20,6 +22,10 @@ static double mem_node;
 
 static int cpuinfo_first = 1;
 static int meminfo_first = 1;
+
+static int num_accel = 0;
+static char *accel_name;
+static int gpuinfo_first = 1;
 
 
 static char *trim(char *s)
@@ -288,6 +294,91 @@ void maprof_read_meminfo(const char *meminfo)
 }
 
 
+static void gpuinfo_unknown()
+{
+  num_accel = 0;
+  accel_name = strdup("unknown");
+}
+
+
+#ifdef __PGI
+static void gpuinfo_pgi(FILE *f)
+{
+  char *key, *val;
+  const int MAX_NAME_LEN = 50;
+  const int MAX_NUM_ACCEL = 10;
+  char names[MAX_NUM_ACCEL][MAX_NAME_LEN+1];
+  int i, len;
+  char *p;
+
+  num_accel = 0;
+  while (scan_line(f, &key, &val)) {
+    if (strcmp(key, "No accelerators found.") == 0) {
+      num_accel = 0;
+      return;
+    }
+    if (strcmp(key, "Device Name") == 0) {
+      if (num_accel <= MAX_NUM_ACCEL) {
+        strncpy(names[num_accel], val, MAX_NAME_LEN);
+        names[num_accel][MAX_NAME_LEN] = '\0';
+      }
+      num_accel++;
+    }
+  }
+
+  len = 0;
+  for (i = 0; i < num_accel; i++) len += strlen(names[i]);
+  len += 2 + 2 * (num_accel-1);
+  if (num_accel > MAX_NUM_ACCEL) len += 5;
+
+  accel_name = malloc(len+1);
+  p = accel_name;
+  p = stpcpy(p, "[");
+  for (i = 0; i < num_accel; i++) {
+    p = stpcpy(p, names[i]);
+    if (i < num_accel - 1) p = stpcpy(p, ", ");
+  }
+  if (num_accel > MAX_NUM_ACCEL) p = stpcpy(p, ", ...");
+  p = stpcpy(p, "]");
+  assert(len == p-accel_name);
+}
+#endif
+
+
+void maprof_read_gpuinfo(const char *gpuinfo)
+{
+  FILE *f;
+
+  gpuinfo_first = 0;
+
+#ifdef __PGI
+  if (gpuinfo == NULL) {
+    f = popen("pgaccelinfo", "r");
+    if (f == NULL) {
+      perror(NULL);
+      gpuinfo_unknown();
+      return;
+    }
+    gpuinfo_pgi(f);
+    pclose(f);
+    return;
+  } else {
+    /* debug */
+    f = fopen(gpuinfo, "r");
+    if (f == NULL) {
+      perror(NULL);
+      exit(1);
+    }
+    gpuinfo_pgi(f);
+    fclose(f);
+    return;
+  }
+#endif
+
+  gpuinfo_unknown();
+}
+
+
 const char *maprof_get_proc_name()
 {
   if (cpuinfo_first) maprof_read_cpuinfo(NULL);
@@ -320,4 +411,18 @@ double maprof_get_mem_node()
 {
   if (meminfo_first) maprof_read_meminfo(NULL);
   return mem_node;
+}
+
+
+int maprof_get_num_accel()
+{
+  if (gpuinfo_first) maprof_read_gpuinfo(NULL);
+  return num_accel;
+}
+
+
+const char *maprof_get_accel_name()
+{
+  if (gpuinfo_first) maprof_read_gpuinfo(NULL);
+  return accel_name;
 }

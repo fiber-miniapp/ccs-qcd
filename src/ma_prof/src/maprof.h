@@ -13,6 +13,7 @@
 #define MAPROF_H
 
 #include <stdio.h>
+#include "config.h"
 
 /* ---------- measuring ---------- */
 
@@ -235,6 +236,13 @@ void maprof_profile_add_float(const char *key, double r);
  * @param[in] n  number of threads
  */
 void maprof_set_num_threads(int n);
+
+
+/**
+ * set Fortran_OPENACC flag
+ * @param[in] n  _OPENACC flag
+ */
+void maprof_set_fortran_openacc(int n);
 
 /**
  * flush stdout stream.

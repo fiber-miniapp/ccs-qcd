@@ -20,7 +20,8 @@
 !*********** 
   complex(8), allocatable :: wce(:,:,:,:,:,:,:)
   complex(8), allocatable :: wco(:,:,:,:,:,:,:)
-  complex(8) :: ve(COL,COL,NTH),vo(COL,COL,NTH) 
+  complex(8), allocatable :: ve(:,:,:,:,:,:)
+  complex(8), allocatable :: vo(:,:,:,:,:,:)
   integer :: mu,nu,ipl,ic,jc
   integer :: ix,iy,iz,itb,ieoxyz
   integer :: ixlow,iylow,izlow,itlow
@@ -37,6 +38,8 @@
 
   allocate(wce(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM))
   allocate(wco(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM))
+  allocate(ve(COL,COL,NTH,NZ,NY,NX))
+  allocate(vo(COL,COL,NTH,NZ,NY,NX))
 
 
   zid8=-zi/8.0d0
@@ -253,7 +256,7 @@
 !     --->---  3--->---
 !
 !***********************************************************************
-!$OMP PARALLEL PRIVATE(ix,iy,iz,ieoxyz,itb,ic,jc,vo,ve,itb0,ix1,iy1,iz1,itb1,ix2,iy2,iz2,itb2,ix3,iy3,iz3,itb3)
+!$OMP PARALLEL PRIVATE(ix,iy,iz,ieoxyz,itb,ic,jc,itb0,ix1,iy1,iz1,itb1,ix2,iy2,iz2,itb2,ix3,iy3,iz3,itb3)
 !$OMP DO COLLAPSE(2)
     do ix=1,NX
     do iy=1,NY
@@ -277,7 +280,7 @@
         !  846 flop
         do jc=1,COL
         do ic=1,COL
-          ve(ic,jc,itb0) =   &
+          ve(ic,jc,itb0,iz,iy,ix) =   &
  &         wco(ic,1,itb1,iz1,iy1,ix1,4)*wco(1,jc,itb1,iz1,iy1,ix1,3)  &
  &        +wco(ic,2,itb1,iz1,iy1,ix1,4)*wco(2,jc,itb1,iz1,iy1,ix1,3)  &
  &        +wco(ic,3,itb1,iz1,iy1,ix1,4)*wco(3,jc,itb1,iz1,iy1,ix1,3)  &
@@ -301,7 +304,7 @@
         !  846 flop
         do jc=1,COL
         do ic=1,COL
-          vo(ic,jc,itb0) =   &
+          vo(ic,jc,itb0,iz,iy,ix) =   &
  &         wce(ic,1,itb1,iz1,iy1,ix1,4)*wce(1,jc,itb1,iz1,iy1,ix1,3)  &
  &        +wce(ic,2,itb1,iz1,iy1,ix1,4)*wce(2,jc,itb1,iz1,iy1,ix1,3)  &
  &        +wce(ic,3,itb1,iz1,iy1,ix1,4)*wce(3,jc,itb1,iz1,iy1,ix1,3)  &
@@ -327,9 +330,9 @@
         do jc=1,COL
         do ic=1,COL
           ucle(ic,jc,itb,iz,iy,ix,ipl)=  &
- &                    (ve(ic,jc,itb)-conjg(ve(jc,ic,itb)))*zid8
+ &                    (ve(ic,jc,itb,iz,iy,ix)-conjg(ve(jc,ic,itb,iz,iy,ix)))*zid8
           uclo(ic,jc,itb,iz,iy,ix,ipl)=  &
- &                    (vo(ic,jc,itb)-conjg(vo(jc,ic,itb)))*zid8
+ &                    (vo(ic,jc,itb,iz,iy,ix)-conjg(vo(jc,ic,itb,iz,iy,ix)))*zid8
         enddo
         enddo
       enddo
@@ -343,7 +346,7 @@
   enddo ! end of do nu
   enddo ! end of do mu
 
-  deallocate(wce,wco)
+  deallocate(wce,wco,ve,vo)
 
   return
 end subroutine

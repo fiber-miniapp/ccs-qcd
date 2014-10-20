@@ -1,8 +1,8 @@
-subroutine mult(yo,FMye,ue,uo,ieo,fclinve)
+subroutine mult(yo_t_,FMye_t_,ue_t_,uo_t_,ieo,fclinve_t_)
 !***********************************************************************
 ! $Id: mult.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
 !
-! Multiply Hopping operator (clover) :  FMye = Fee^-1 Meo yo
+! Multiply Hopping operator (clover) :  FMye_t = Fee^-1 Meo yo_t
 !
 !      yo : an odd/even site quark field (ieo=0/1) (input)
 !    FMye : an even/odd site quark field (ieo=0/1) (output)
@@ -15,25 +15,33 @@ subroutine mult(yo,FMye,ue,uo,ieo,fclinve)
 !
 !***********************************************************************
   implicit none
-  complex(8), intent(in) :: ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
-  complex(8), intent(in) :: uo(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
-  complex(8), intent(inout) :: yo(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(in) :: ue_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(in) :: uo_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(inout) :: yo_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
   integer , intent(in) :: ieo
-  complex(8), intent(out):: FMye(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
-  complex(8), intent(in) :: fclinve(CLSPH,0:NTH,NZ,NY,NX,2)
+  complex(8), intent(out):: FMye_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(in) :: fclinve_t(CLSPH,0:NTH,NZ,NY,NX,2)
+
+!$acc data pcopy(yo_t_,FMye_t_) pcopyin(ue_t_,uo_t_,fclinve_t_) async(0)
 
   !====================================
-  ! boundary exchange copy on yo
+  ! boundary exchange copy on yo_t
   !====================================
-  call copy_y(yo,mod(ieo+1,2))
+  call copy_y_t(yo_t_,mod(ieo+1,2))
 
   !====================================
   ! hopping 
   !  FMye = F^-1ee Meo yo
   !====================================
-  call mult_eo_tzyx(yo,FMye,ue,uo,ieo,fclinve)
+#ifdef _OPENACC
+  call mult_eo_tzyx_openacc(yo_t_,FMye_t_,ue_t_,uo_t_,ieo,fclinve_t_)
+#else
+  call mult_eo_tzyx(yo_t_,FMye_t_,ue_t_,uo_t_,ieo,fclinve_t_)
+#endif
 
   mult_iter=mult_iter+1
+
+!$acc end data
 
   return
 end subroutine

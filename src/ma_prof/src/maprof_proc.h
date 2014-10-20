@@ -17,9 +17,15 @@ int maprof_get_num_proc_node();
 
 double maprof_get_mem_node();
 
+int maprof_get_num_accel();
+
+const char *maprof_get_accel_name();
+
 void maprof_read_cpuinfo(const char *cpuinfo);  /* for debug */
 
 void maprof_read_meminfo(const char *meminfo);  /* for debug */
+
+void maprof_read_gpuinfo(const char *gpuinfo);  /* for debug */
 
 
 #endif /* MAPROF_PROC_H */

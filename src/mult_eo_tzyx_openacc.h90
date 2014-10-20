@@ -1,4 +1,4 @@
-subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
+subroutine mult_eo_tzyx_openacc(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
 !***********************************************************************
 !$Id: mult_eo_tzyx.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
 !
@@ -26,27 +26,34 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
   complex(8):: b1,b2,b3,b4,b5,b6
   complex(8):: p1,p2,p3,p4,p5,p6
   complex(8):: m1,m2,m3,m4,m5,m6
-  complex(8) :: yt(COL,SPIN)
+  complex(8) :: yt11, yt12, yt13, yt14
+  complex(8) :: yt21, yt22, yt23, yt24
+  complex(8) :: yt31, yt32, yt33, yt34
   complex(8) :: gy11,gy21,gy31,gy12,gy22,gy32
   complex(8) :: hp11,hp21,hp31,hp12,hp22,hp32
-  integer :: ix,iy,iz,itb,itbup,itbdn,ieoxyz,ic
+  integer :: ix,iy,iz,ith,itb,itbup,itbdn,ieoxyz,ic
 
-!$OMP PARALLEL  &
-!$OMP& PRIVATE(yt,ix,iy,iz,ieoxyz,itb,itbup,itbdn,ic,  &
-!$OMP&         a1,a2,a3,a4,a5,a6, &
-!$OMP&         b1,b2,b3,b4,b5,b6, &
-!$OMP&         p1,p2,p3,p4,p5,p6, &
-!$OMP&         m1,m2,m3,m4,m5,m6, &
-!$OMP&         gy11,gy21,gy31,gy12,gy22,gy32,  &
-!$OMP&         hp11,hp21,hp31,hp12,hp22,hp32)
-!$OMP DO COLLAPSE(2)
+  !$acc kernels pcopy(yde_t_) pcopyin(yo_t_,ue_t_,uo_t_,fclinve_t_) async(0)
+  !$acc loop collapse(4) independent gang vector(32) 
+  !$OMP PARALLEL  &
+  !$OMP& PRIVATE(ix,iy,iz,ieoxyz,itb,itbup,itbdn,ic,  &
+  !$OMP&         a1,a2,a3,a4,a5,a6, &
+  !$OMP&         b1,b2,b3,b4,b5,b6, &
+  !$OMP&         p1,p2,p3,p4,p5,p6, & 
+  !$OMP&         m1,m2,m3,m4,m5,m6, &
+  !$OMP&         yt11,yt21,yt31,yt12,yt22,yt32,  &
+  !$OMP&         yt13,yt23,yt33,yt14,yt24,yt34,  &
+  !$OMP&         gy11,gy21,gy31,gy12,gy22,gy32,  &
+  !$OMP&         hp11,hp21,hp31,hp12,hp22,hp32)
+  !$OMP DO COLLAPSE(2)
   do ix=1,NX
   do iy=1,NY         
   do iz=1,NZ
+  do ith=1,NTH
     ieoxyz = mod(ipeo+ix+iy+iz+ieo,2)
     itbup =   +ieoxyz 
     itbdn = -(1-ieoxyz)
-    do itb=1-ieoxyz,NTH-ieoxyz
+    itb=ith-ieoxyz
 
 !**************
 ! T-direction
@@ -55,14 +62,14 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
 ! forward
 !**************
     ic=1
-      yt(ic,3) =    &
+      yt13     =    &
  &    + 2.0d0*(       ue_t(ic,1,itb,      iz,iy,ix,4)*    &
  &                    yo_t( 1,3,itb+itbup,iz,iy,ix)    &
  &            +       ue_t(ic,2,itb,      iz,iy,ix,4)*    &
  &                    yo_t( 2,3,itb+itbup,iz,iy,ix)    &
  &            +       ue_t(ic,3,itb,      iz,iy,ix,4)*    &
  &                    yo_t( 3,3,itb+itbup,iz,iy,ix) )
-      yt(ic,4) =     &
+      yt14     =     &
  &    + 2.0d0*(       ue_t(ic,1,itb,      iz,iy,ix,4)*    &
  &                    yo_t( 1,4,itb+itbup,iz,iy,ix)    &
  &            +       ue_t(ic,2,itb,      iz,iy,ix,4)*    &
@@ -70,14 +77,14 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
  &            +       ue_t(ic,3,itb,      iz,iy,ix,4)*    &
  &                    yo_t( 3,4,itb+itbup,iz,iy,ix) )
     ic=2
-      yt(ic,3) =     &
+      yt23     =     &
  &    + 2.0d0*(       ue_t(ic,1,itb,      iz,iy,ix,4)*    &
  &                    yo_t( 1,3,itb+itbup,iz,iy,ix)    &
  &            +       ue_t(ic,2,itb,      iz,iy,ix,4)*    &
  &                    yo_t( 2,3,itb+itbup,iz,iy,ix)    &
  &            +       ue_t(ic,3,itb,      iz,iy,ix,4)*    &
  &                    yo_t( 3,3,itb+itbup,iz,iy,ix) )
-      yt(ic,4) =     &
+      yt24     =     &
  &    + 2.0d0*(       ue_t(ic,1,itb,      iz,iy,ix,4)*    &
  &                    yo_t( 1,4,itb+itbup,iz,iy,ix)    &
  &            +       ue_t(ic,2,itb,      iz,iy,ix,4)*    &
@@ -85,14 +92,14 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
  &            +       ue_t(ic,3,itb,      iz,iy,ix,4)*    &
  &                    yo_t( 3,4,itb+itbup,iz,iy,ix) )
     ic=3
-      yt(ic,3) =      &
+      yt33     =      &
  &    + 2.0d0*(       ue_t(ic,1,itb,      iz,iy,ix,4)*     &
  &                    yo_t( 1,3,itb+itbup,iz,iy,ix)     &
  &            +       ue_t(ic,2,itb,      iz,iy,ix,4)*     &
  &                    yo_t( 2,3,itb+itbup,iz,iy,ix)     &
  &            +       ue_t(ic,3,itb,      iz,iy,ix,4)*     &
  &                    yo_t( 3,3,itb+itbup,iz,iy,ix) )
-      yt(ic,4) =      &
+      yt34     =      &
  &    + 2.0d0*(       ue_t(ic,1,itb,      iz,iy,ix,4)*     &
  &                    yo_t( 1,4,itb+itbup,iz,iy,ix)     &
  &            +       ue_t(ic,2,itb,      iz,iy,ix,4)*     &
@@ -103,14 +110,14 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
 ! bakward
 !**************
     ic=1
-      yt(ic,1) =     &
+      yt11   =     &
  &    + 2.0d0*( conjg(uo_t(1,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(1, 1,itb+itbdn,iz,iy,ix)     &
  &            + conjg(uo_t(2,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(2, 1,itb+itbdn,iz,iy,ix)     &
  &            + conjg(uo_t(3,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(3, 1,itb+itbdn,iz,iy,ix)   )
-      yt(ic,2) =      &
+      yt12   =      &
  &    + 2.0d0*( conjg(uo_t(1,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(1, 2,itb+itbdn,iz,iy,ix)     &
  &            + conjg(uo_t(2,ic,itb+itbdn,iz,iy,ix,4))*     &
@@ -118,14 +125,14 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
  &            + conjg(uo_t(3,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(3, 2,itb+itbdn,iz,iy,ix)   )
     ic=2
-      yt(ic,1) =      &
+      yt21   =      &
  &    + 2.0d0*( conjg(uo_t(1,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(1, 1,itb+itbdn,iz,iy,ix)     &
  &            + conjg(uo_t(2,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(2, 1,itb+itbdn,iz,iy,ix)     &
  &            + conjg(uo_t(3,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(3, 1,itb+itbdn,iz,iy,ix)   )
-      yt(ic,2) =      &
+      yt22   =      &
  &    + 2.0d0*( conjg(uo_t(1,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(1, 2,itb+itbdn,iz,iy,ix)     &
  &            + conjg(uo_t(2,ic,itb+itbdn,iz,iy,ix,4))*     &
@@ -133,14 +140,14 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
  &            + conjg(uo_t(3,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(3, 2,itb+itbdn,iz,iy,ix)   )
     ic=3
-      yt(ic,1) =      &
+      yt31   =      &
  &    + 2.0d0*( conjg(uo_t(1,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(1, 1,itb+itbdn,iz,iy,ix)     &
  &            + conjg(uo_t(2,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(2, 1,itb+itbdn,iz,iy,ix)     &
  &            + conjg(uo_t(3,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(3, 1,itb+itbdn,iz,iy,ix)   )
-      yt(ic,2) =      &
+      yt32   =      &
  &    + 2.0d0*( conjg(uo_t(1,ic,itb+itbdn,iz,iy,ix,4))*     &
  &                    yo_t(1, 2,itb+itbdn,iz,iy,ix)     &
  &            + conjg(uo_t(2,ic,itb+itbdn,iz,iy,ix,4))*     &
@@ -212,21 +219,21 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
  &           ue_t(3,2,itb,iz,iy,ix,3) * gy22 +     &
  &           ue_t(3,3,itb,iz,iy,ix,3) * gy32
 
-      yt(1,1) = yt(1,1) + hp11
-      yt(2,1) = yt(2,1) + hp21
-      yt(3,1) = yt(3,1) + hp31
+      yt11 = yt11 + hp11
+      yt21 = yt21 + hp21
+      yt31 = yt31 + hp31
 
-      yt(1,2) = yt(1,2) + hp12
-      yt(2,2) = yt(2,2) + hp22
-      yt(3,2) = yt(3,2) + hp32
+      yt12 = yt12 + hp12
+      yt22 = yt22 + hp22
+      yt32 = yt32 + hp32
 
-      yt(1,3) = yt(1,3) + dcmplx( aimag(hp11), -dble(hp11) )
-      yt(2,3) = yt(2,3) + dcmplx( aimag(hp21), -dble(hp21) )
-      yt(3,3) = yt(3,3) + dcmplx( aimag(hp31), -dble(hp31) )
+      yt13 = yt13 + dcmplx( aimag(hp11), -dble(hp11) )
+      yt23 = yt23 + dcmplx( aimag(hp21), -dble(hp21) )
+      yt33 = yt33 + dcmplx( aimag(hp31), -dble(hp31) )
 
-      yt(1,4) = yt(1,4) + dcmplx(-aimag(hp12),  dble(hp12) )
-      yt(2,4) = yt(2,4) + dcmplx(-aimag(hp22),  dble(hp22) )
-      yt(3,4) = yt(3,4) + dcmplx(-aimag(hp32),  dble(hp32) )
+      yt14 = yt14 + dcmplx(-aimag(hp12),  dble(hp12) )
+      yt24 = yt24 + dcmplx(-aimag(hp22),  dble(hp22) )
+      yt34 = yt34 + dcmplx(-aimag(hp32),  dble(hp32) )
 
 !**************
 ! backward
@@ -289,21 +296,21 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
  &           conjg(uo_t(2,3,itb,iz-1,iy,ix,3)) * gy22 +     &
  &           conjg(uo_t(3,3,itb,iz-1,iy,ix,3)) * gy32
 
-      yt(1,1) = yt(1,1) + hp11
-      yt(2,1) = yt(2,1) + hp21
-      yt(3,1) = yt(3,1) + hp31
+      yt11 = yt11 + hp11
+      yt21 = yt21 + hp21
+      yt31 = yt31 + hp31
 
-      yt(1,2) = yt(1,2) + hp12
-      yt(2,2) = yt(2,2) + hp22
-      yt(3,2) = yt(3,2) + hp32
+      yt12 = yt12 + hp12
+      yt22 = yt22 + hp22
+      yt32 = yt32 + hp32
 
-      yt(1,3) = yt(1,3) + dcmplx(-aimag(hp11),  dble(hp11) )
-      yt(2,3) = yt(2,3) + dcmplx(-aimag(hp21),  dble(hp21) )
-      yt(3,3) = yt(3,3) + dcmplx(-aimag(hp31),  dble(hp31) )
+      yt13 = yt13 + dcmplx(-aimag(hp11),  dble(hp11) )
+      yt23 = yt23 + dcmplx(-aimag(hp21),  dble(hp21) )
+      yt33 = yt33 + dcmplx(-aimag(hp31),  dble(hp31) )
 
-      yt(1,4) = yt(1,4) + dcmplx( aimag(hp12), -dble(hp12) )
-      yt(2,4) = yt(2,4) + dcmplx( aimag(hp22), -dble(hp22) )
-      yt(3,4) = yt(3,4) + dcmplx( aimag(hp32), -dble(hp32) )
+      yt14 = yt14 + dcmplx( aimag(hp12), -dble(hp12) )
+      yt24 = yt24 + dcmplx( aimag(hp22), -dble(hp22) )
+      yt34 = yt34 + dcmplx( aimag(hp32), -dble(hp32) )
 
 !**************
 ! Y-direction
@@ -350,21 +357,21 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
  &           ue_t(3,2,itb,iz,iy,ix,2) * gy22 +     &
  &           ue_t(3,3,itb,iz,iy,ix,2) * gy32
 
-      yt(1,1) = yt(1,1) + hp11
-      yt(2,1) = yt(2,1) + hp21
-      yt(3,1) = yt(3,1) + hp31
+      yt11 = yt11 + hp11
+      yt21 = yt21 + hp21
+      yt31 = yt31 + hp31
 
-      yt(1,2) = yt(1,2) + hp12
-      yt(2,2) = yt(2,2) + hp22
-      yt(3,2) = yt(3,2) + hp32
+      yt12 = yt12 + hp12
+      yt22 = yt22 + hp22
+      yt32 = yt32 + hp32
 
-      yt(1,3) = yt(1,3) - hp12
-      yt(2,3) = yt(2,3) - hp22
-      yt(3,3) = yt(3,3) - hp32
+      yt13 = yt13 - hp12
+      yt23 = yt23 - hp22
+      yt33 = yt33 - hp32
 
-      yt(1,4) = yt(1,4) + hp11
-      yt(2,4) = yt(2,4) + hp21
-      yt(3,4) = yt(3,4) + hp31
+      yt14 = yt14 + hp11
+      yt24 = yt24 + hp21
+      yt34 = yt34 + hp31
 
 !**************
 ! backward
@@ -407,21 +414,21 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
  &           conjg(uo_t(2,3,itb,iz,iy-1,ix,2)) * gy22 +     &
  &           conjg(uo_t(3,3,itb,iz,iy-1,ix,2)) * gy32
 
-      yt(1,1) = yt(1,1) + hp11
-      yt(2,1) = yt(2,1) + hp21
-      yt(3,1) = yt(3,1) + hp31
+      yt11 = yt11 + hp11
+      yt21 = yt21 + hp21
+      yt31 = yt31 + hp31
 
-      yt(1,2) = yt(1,2) + hp12
-      yt(2,2) = yt(2,2) + hp22
-      yt(3,2) = yt(3,2) + hp32
+      yt12 = yt12 + hp12
+      yt22 = yt22 + hp22
+      yt32 = yt32 + hp32
 
-      yt(1,3) = yt(1,3) + hp12
-      yt(2,3) = yt(2,3) + hp22
-      yt(3,3) = yt(3,3) + hp32
+      yt13 = yt13 + hp12
+      yt23 = yt23 + hp22
+      yt33 = yt33 + hp32
 
-      yt(1,4) = yt(1,4) - hp11
-      yt(2,4) = yt(2,4) - hp21
-      yt(3,4) = yt(3,4) - hp31
+      yt14 = yt14 - hp11
+      yt24 = yt24 - hp21
+      yt34 = yt34 - hp31
 
 !**************
 ! X-direction
@@ -486,21 +493,21 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
  &           ue_t(3,2,itb,iz,iy,ix,1) * gy22 +     &
  &           ue_t(3,3,itb,iz,iy,ix,1) * gy32
 
-      yt(1,1) = yt(1,1) + hp11
-      yt(2,1) = yt(2,1) + hp21
-      yt(3,1) = yt(3,1) + hp31
+      yt11 = yt11 + hp11
+      yt21 = yt21 + hp21
+      yt31 = yt31 + hp31
 
-      yt(1,2) = yt(1,2) + hp12
-      yt(2,2) = yt(2,2) + hp22
-      yt(3,2) = yt(3,2) + hp32
+      yt12 = yt12 + hp12
+      yt22 = yt22 + hp22
+      yt32 = yt32 + hp32
 
-      yt(1,3) = yt(1,3) + dcmplx( aimag(hp12), -dble(hp12) )
-      yt(2,3) = yt(2,3) + dcmplx( aimag(hp22), -dble(hp22) )
-      yt(3,3) = yt(3,3) + dcmplx( aimag(hp32), -dble(hp32) )
+      yt13 = yt13 + dcmplx( aimag(hp12), -dble(hp12) )
+      yt23 = yt23 + dcmplx( aimag(hp22), -dble(hp22) )
+      yt33 = yt33 + dcmplx( aimag(hp32), -dble(hp32) )
 
-      yt(1,4) = yt(1,4) + dcmplx( aimag(hp11), -dble(hp11) )
-      yt(2,4) = yt(2,4) + dcmplx( aimag(hp21), -dble(hp21) )
-      yt(3,4) = yt(3,4) + dcmplx( aimag(hp31), -dble(hp31) )
+      yt14 = yt14 + dcmplx( aimag(hp11), -dble(hp11) )
+      yt24 = yt24 + dcmplx( aimag(hp21), -dble(hp21) )
+      yt34 = yt34 + dcmplx( aimag(hp31), -dble(hp31) )
 
 !**************
 ! backward
@@ -561,21 +568,21 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
  &           conjg(uo_t(2,3,itb,iz,iy,ix-1,1)) * gy22 +     &
  &           conjg(uo_t(3,3,itb,iz,iy,ix-1,1)) * gy32
 
-      yt(1,1) = yt(1,1) + hp11
-      yt(2,1) = yt(2,1) + hp21
-      yt(3,1) = yt(3,1) + hp31
+      yt11 = yt11 + hp11
+      yt21 = yt21 + hp21
+      yt31 = yt31 + hp31
 
-      yt(1,2) = yt(1,2) + hp12
-      yt(2,2) = yt(2,2) + hp22
-      yt(3,2) = yt(3,2) + hp32
+      yt12 = yt12 + hp12
+      yt22 = yt22 + hp22
+      yt32 = yt32 + hp32
 
-      yt(1,3) = yt(1,3) + dcmplx(-aimag(hp12), dble(hp12) )
-      yt(2,3) = yt(2,3) + dcmplx(-aimag(hp22), dble(hp22) )
-      yt(3,3) = yt(3,3) + dcmplx(-aimag(hp32), dble(hp32) )
+      yt13 = yt13 + dcmplx(-aimag(hp12), dble(hp12) )
+      yt23 = yt23 + dcmplx(-aimag(hp22), dble(hp22) )
+      yt33 = yt33 + dcmplx(-aimag(hp32), dble(hp32) )
 
-      yt(1,4) = yt(1,4) + dcmplx(-aimag(hp11), dble(hp11) )
-      yt(2,4) = yt(2,4) + dcmplx(-aimag(hp21), dble(hp21) )
-      yt(3,4) = yt(3,4) + dcmplx(-aimag(hp31), dble(hp31) )
+      yt14 = yt14 + dcmplx(-aimag(hp11), dble(hp11) )
+      yt24 = yt24 + dcmplx(-aimag(hp21), dble(hp21) )
+      yt34 = yt34 + dcmplx(-aimag(hp31), dble(hp31) )
 
 !**********************************************************
 ! Calc:
@@ -583,18 +590,18 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
 !  yde_t = F^-1ee ye
 !      
 !**********************************************************
-      p1=yt(1,1)+yt(1,3)
-      p2=yt(2,1)+yt(2,3)
-      p3=yt(3,1)+yt(3,3)
-      p4=yt(1,2)+yt(1,4)
-      p5=yt(2,2)+yt(2,4)
-      p6=yt(3,2)+yt(3,4)
-      m1=yt(1,1)-yt(1,3)
-      m2=yt(2,1)-yt(2,3)
-      m3=yt(3,1)-yt(3,3)
-      m4=yt(1,2)-yt(1,4)
-      m5=yt(2,2)-yt(2,4)
-      m6=yt(3,2)-yt(3,4)
+      p1=yt11+yt13
+      p2=yt21+yt23
+      p3=yt31+yt33
+      p4=yt12+yt14
+      p5=yt22+yt24
+      p6=yt32+yt34
+      m1=yt11-yt13
+      m2=yt21-yt23
+      m3=yt31-yt33
+      m4=yt12-yt14
+      m5=yt22-yt24
+      m6=yt32-yt34
 
       a1 =       fclinve_t( 1,itb,iz,iy,ix,2) * p1  &
  &              +fclinve_t( 2,itb,iz,iy,ix,2) * p2  &
@@ -687,8 +694,9 @@ subroutine mult_eo_tzyx(yo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
   enddo
   enddo
   enddo
-!$OMP END DO
-!$OMP END PARALLEL
+  !$OMP END DO
+  !$OMP END PARALLEL
+  !$acc end kernels
 
   return
 end subroutine

@@ -38,6 +38,8 @@ static int N_sections = 0;
 
 static int N_threads = 0;
 
+static int Fortran_OPENACC = 0;
+
 
 static const char *get_host_name()
 {
@@ -105,6 +107,18 @@ static void system_setup()
   maprof_yaml_add_map_item(Node_system, "num_core_node", maprof_yaml_int_node(maprof_get_num_core_node()));
   maprof_yaml_add_map_item(Node_system, "num_proc_node", maprof_yaml_int_node(maprof_get_num_proc_node()));
   maprof_yaml_add_map_item(Node_system, "mem_node", maprof_yaml_float_node(maprof_get_mem_node()));
+
+#ifdef _OPENACC
+  if (maprof_get_num_accel() > 0) {
+    maprof_yaml_add_map_item(Node_system, "accelerators", maprof_yaml_str_node(maprof_get_accel_name()));
+  }
+#else
+  if (Fortran_OPENACC > 0) {
+  if (maprof_get_num_accel() > 0) {
+    maprof_yaml_add_map_item(Node_system, "accelerators", maprof_yaml_str_node(maprof_get_accel_name()));
+  }
+  }
+#endif
 }
 
 
@@ -304,6 +318,11 @@ void maprof_profile_add_float(const char *key, double r)
 void maprof_set_num_threads(int n)
 {
   N_threads = n;
+}
+
+void maprof_set_fortran_openacc(int n)
+{
+  Fortran_OPENACC = n;
 }
 
 void maprof_flush_stdout()

@@ -23,13 +23,24 @@ program ccs_qcd_solver_bench
   complex(8) ::  uo(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
   complex(8) :: fclinve(CLSPH,0:NTH,NZ,NY,NX,2)
   complex(8) :: fclinvo(CLSPH,0:NTH,NZ,NY,NX,2)
+
+  complex(8) ::  ye_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8) ::  yo_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8) :: yde_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8) ::  ue_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8) ::  uo_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8) :: fclinve_t(CLSPH,0:NTH,NZ,NY,NX,2)
+  complex(8) :: fclinvo_t(CLSPH,0:NTH,NZ,NY,NX,2)
+  complex(8) :: myo_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+
+
   complex(8), allocatable :: ucle(:,:,:,:,:,:,:)
   complex(8), allocatable :: uclo(:,:,:,:,:,:,:)
   real(8) :: bicg_dp_flop, tclv_flop, flop
   real(8) :: bicg_st_min_ops, bicg_ld_min_ops, stops, ldops
   real(8) :: kappa,csw,tol,logdetfcl
   integer :: iiter
-  integer :: ix,iy,iz,itb,ieoxyz,ic,is
+  integer :: ix,iy,iz,itb,ieoxyz,ic,is,ith,idim,jc
   real(8) :: rnorm1,rnorm2,rnorm3
   integer :: iargc, iarg_count
   character(256) :: arg
@@ -124,6 +135,55 @@ program ccs_qcd_solver_bench
   call output(ue,uo,ye,yo)
 
 !************************
+! transpose
+!************************
+  do idim=1,NDIM
+  do ix=0,NX1
+  do iy=0,NY1
+  do iz=0,NZ1
+  do ith=0,NTH
+  do jc=1,COL
+  do ic=1,COL
+     ue_t(ic,jc,ith,iz,iy,ix,idim) = ue(ic,jc,ith,iz,iy,ix,idim)
+     uo_t(ic,jc,ith,iz,iy,ix,idim) = uo(ic,jc,ith,iz,iy,ix,idim)
+  enddo
+  enddo
+  enddo
+  enddo
+  enddo
+  enddo
+  enddo
+
+  do ix=0,NX1
+  do iy=0,NY1
+  do iz=0,NZ1
+  do ith=0,NTH
+  do is=1,SPIN
+  do ic=1,COL
+     ye_t(ic,is,ith,iz,iy,ix) = ye(ic,is,ith,iz,iy,ix) 
+  enddo
+  enddo
+  enddo
+  enddo
+  enddo
+  enddo
+
+  do is=1,2
+  do ix=1,NX
+  do iy=1,NY
+  do iz=1,NZ
+  do ith=0,NTH
+  do ic=1,CLSPH
+     fclinve_t(ic,ith,iz,iy,ix,is) = fclinve(ic,ith,iz,iy,ix,is) 
+     fclinvo_t(ic,ith,iz,iy,ix,is) = fclinvo(ic,ith,iz,iy,ix,is) 
+  enddo
+  enddo
+  enddo
+  enddo
+  enddo
+  enddo
+
+!************************
 ! BiCGStab test
 !************************
   bicg_dp_flop = 0.0d0
@@ -137,7 +197,7 @@ program ccs_qcd_solver_bench
   call xclock(etime0,8)
   call maprof_time_start(SEC_BICGSTAB)
   call bicgstab_hmc(tol,iiter,flop,stops, ldops, etime2,  &
-      &                    kappa,ye,yde,ue,uo,0,fclinve,fclinvo)
+      &                    kappa,ye_t_,yde_t_,ue_t_,uo_t_,0,fclinve_t_,fclinvo_t_)
   call xclock(etime1,8)
   call maprof_time_stop(SEC_BICGSTAB)
   bicg_dp_flop = bicg_dp_flop + flop
@@ -153,7 +213,29 @@ program ccs_qcd_solver_bench
 !   A x = b ?
 !   A x => yde
 !************************
-  call mult_mb_pre(kappa,yde,yo,ue,uo,0,fclinve,fclinvo)
+  call mult_mb_pre(kappa,yde_t_,yo_t_,ue_t_,uo_t_,0,fclinve_t_,fclinvo_t_,myo_t_)
+  !$acc wait
+
+!************************
+! transpose
+!************************
+  do ix=0,NX1
+  do iy=0,NY1
+  do iz=0,NZ1
+  do ith=0,NTH
+  do is=1,SPIN
+  do ic=1,COL
+      yo(ic,is,ith,iz,iy,ix) =  yo_t(ic,is,ith,iz,iy,ix)
+      yde(ic,is,ith,iz,iy,ix) = yde_t(ic,is,ith,iz,iy,ix)
+  enddo
+  enddo
+  enddo
+  enddo
+  enddo
+  enddo
+  !
+
+
   rnorm1=0.0d0
   rnorm2=0.0d0
   rnorm3=0.0d0
