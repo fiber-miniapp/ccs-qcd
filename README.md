@@ -68,6 +68,8 @@ Some predefined sysdep files are included in this package:
 * make.fx10.inc: For K and FX10-based systems
 * make.gfortran.inc: For using the GNU compiler
 * make.ifort.inc: For using the Intel compiler
+* make.pgi.inc: For using the pgi compiler
+* make.pgiacc.inc: For using the pgi compiler with OpenACC (required the PGI compiler version 14.6 or higher)
 
 
 To change the process decomposition, use PX, PY, PZ options as
@@ -152,4 +154,11 @@ exceptions:
   2014)](http://github.com/fiber-miniapp/ccs-qcd/tree/1.1)
     - Update clover.h90 and make.fx10.inc
 
+* [v1.1.1 (August 28,
+  2014)](http://github.com/fiber-miniapp/ccs-qcd/tree/1.1.1)
+    - Fix file permission
+
+* [v1.2 (October 20,
+  2014)](http://github.com/fiber-miniapp/ccs-qcd/tree/1.2)
+    - Add the OpenACC implementation
   

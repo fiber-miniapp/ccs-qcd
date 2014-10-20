@@ -1,7 +1,7 @@
-subroutine mult_mb_pre(kappa,ye,yde,ue,uo,ieo,fclinve,fclinvo)
+subroutine mult_mb_pre(kappa,ye_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_,fclinvo_t_,Myo_t_)
 !***********************************************************************
 ! $Id: mult_mb_pre.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
-!                                                               v
+!                                                                 v
 ! Multiply site red/black preconditioned Dirac operator : yde = Dee ye,
 ! where  v
 !        Dee = 1ee - kappa^2 (Fee^-1 Meo)(Foo^-1 Moe)
@@ -11,7 +11,7 @@ subroutine mult_mb_pre(kappa,ye,yde,ue,uo,ieo,fclinve,fclinvo)
 !     yde : even/odd site quark field (ieo=0/1) (output)
 !      ue : even/odd site gauge link (ieo=0/1)
 !      uo : odd/even site gauge link (ieo=0/1)
-!     ieo : operation index
+!     ieo   : operation index
 !             ieo=0 for even site
 !             ieo=1 for  odd site
 ! fclinve : even/odd site inverse clover term (ieo=0/1) (chiral rep. linear form)
@@ -21,50 +21,67 @@ subroutine mult_mb_pre(kappa,ye,yde,ue,uo,ieo,fclinve,fclinvo)
   implicit none
   real(8), intent(in) :: kappa
   integer, intent(in) :: ieo
-  complex(8), intent(in) :: ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
-  complex(8), intent(in) :: uo(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
-  complex(8), intent(inout) :: ye(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
-  complex(8), intent(out):: yde(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
-  complex(8), intent(in) :: fclinve(CLSPH,0:NTH,NZ,NY,NX,2)
-  complex(8), intent(in) :: fclinvo(CLSPH,0:NTH,NZ,NY,NX,2)
+  complex(8), intent(in) :: ue_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(in) :: uo_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(inout) :: ye_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(out):: yde_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(in) :: fclinve_t(CLSPH,0:NTH,NZ,NY,NX,2)
+  complex(8), intent(in) :: fclinvo_t(CLSPH,0:NTH,NZ,NY,NX,2)
+  complex(8), intent(inout) :: Myo_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
 !************
-  complex(8) :: Myo(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
   real(8) :: kappa2
-  integer :: ix,iy,iz,itb,ieoxyz,ic,is
+  integer :: ix,iy,iz,ith,itb,ieoxyz,ic,is
 
   kappa2=kappa**2
+
+!$acc data pcopy(yde_t_) pcreate(Myo_t_) pcopyin(ye_t_,ue_t_,uo_t_,fclinve_t_,fclinvo_t_) async(0)
 
 !**********************************
 !  Myo = Foo^-1 Moe ye
 !**********************************
-  call mult(ye,Myo,uo,ue,mod(ieo+1,2),fclinvo)
+  call mult(ye_t_,Myo_t_,uo_t_,ue_t_,mod(ieo+1,2),fclinvo_t_)
 
 !**********************************
 !  yde = Fee^-1 Meo Myo
-!      = Fee^-1 Meo Foo^-1 Moe ye
+!        = Fee^-1 Meo Foo^-1 Moe ye_t
 !**********************************
-  call mult(Myo,yde,ue,uo,ieo,fclinve)
+  call mult(Myo_t_,yde_t_,ue_t_,uo_t_,ieo,fclinve_t_)
 
 !**************************************************
 !  yde = ye - kappa^2 yde
 !      = ye - kappa^2 Fee^-1 Meo Foo^-1 Moe ye
 !**************************************************
-!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,ic,is)
+#ifdef _OPENACC
+  !$acc kernels pcopy(yde_t_) pcopyin(ye_t_) async(0)
+  !$acc loop collapse(6) independent gang vector(128) 
+  do is=1,SPIN
+  do ic=1,COL
   do ix=1,NX
   do iy=1,NY
   do iz=1,NZ
-    ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
-    do itb=1-ieoxyz,NTH-ieoxyz
-      do is=1,SPIN
-      do ic=1,COL
-        yde(ic,is,itb,iz,iy,ix)=ye(ic,is,itb,iz,iy,ix)  &
- &                     -kappa2*yde(ic,is,itb,iz,iy,ix)
-      enddo
-      enddo
-    enddo
+  do ith=1,NTH
+#else
+  !$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,ith,itb,ic,is) COLLAPSE(2)
+  do ix=1,NX
+  do iy=1,NY
+  do iz=1,NZ
+  do ith=1,NTH
+  do is=1,SPIN
+  do ic=1,COL
+#endif
+      ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+      itb=ith-ieoxyz
+      yde_t(ic,is,itb,iz,iy,ix)=ye_t(ic,is,itb,iz,iy,ix)  &
+ &                     -kappa2*yde_t(ic,is,itb,iz,iy,ix)
+  enddo
+  enddo
+  enddo
   enddo
   enddo
   enddo ! end of do ix,iy,iz
+  !$acc end kernels
+
+!$acc end data
 
   return
 end subroutine
