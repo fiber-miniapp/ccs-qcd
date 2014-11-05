@@ -1,4 +1,4 @@
-subroutine expp_u(dt,pe,ue,ieo)
+subroutine expp_u(dt,pe,ue_t_,ieo)
 !***********************************************************************
 !$Id: expp_u.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
 !
@@ -17,8 +17,8 @@ subroutine expp_u(dt,pe,ue,ieo)
   implicit none
   real(8), intent(in) :: dt
   complex(8), intent(inout) ::  &
- &                          ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
-  complex(8), intent(in) :: pe(COL,COL,0:NTH,NZ,NY,NX,NDIM)
+ &                          ue_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(in) :: pe  (COL,COL,0:NTH,NZ,NY,NX,NDIM)
   integer, intent(in) :: ieo
 !*****
   complex(8), parameter :: zi=(0.0d0,1.0d0)
@@ -132,9 +132,9 @@ subroutine expp_u(dt,pe,ue,ieo)
       do jc = 1,COL
       do ic = 1,COL
         W(ic,jc,itb)=  &
- &       expP(ic,1,itb)*ue(1,jc,itb,iz,iy,ix,mu)  &
- &      +expP(ic,2,itb)*ue(2,jc,itb,iz,iy,ix,mu)  &
- &      +expP(ic,3,itb)*ue(3,jc,itb,iz,iy,ix,mu)
+ &       expP(ic,1,itb)*ue_t(1,jc,itb,iz,iy,ix,mu)  &
+ &      +expP(ic,2,itb)*ue_t(2,jc,itb,iz,iy,ix,mu)  &
+ &      +expP(ic,3,itb)*ue_t(3,jc,itb,iz,iy,ix,mu)
       enddo
       enddo
     enddo
@@ -142,7 +142,7 @@ subroutine expp_u(dt,pe,ue,ieo)
     do itb=1-ieoxyz,NTH-ieoxyz
       do jc = 1,COL
       do ic = 1,COL
-        ue(ic,jc,itb,iz,iy,ix,mu)=W(ic,jc,itb)
+        ue_t(ic,jc,itb,iz,iy,ix,mu)=W(ic,jc,itb)
       enddo
       enddo
     enddo
@@ -151,7 +151,7 @@ subroutine expp_u(dt,pe,ue,ieo)
   enddo
   enddo ! end of do ix,iy,iz
 
-  call copy_u(ue,mu,ieo)
+  call copy_u(ue_t_,mu,ieo)
 
   enddo ! end of do mu
 

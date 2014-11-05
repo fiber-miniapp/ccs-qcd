@@ -1,9 +1,3 @@
-/*
- * Copyright (C) 2014 RIKEN AICS
- * This library is released under the terms of the MIT license.
- * http://fiber-miniapp.mit-license.org/
- */
-
 #include <stdlib.h>
 #include <sys/time.h>
 #include <stdio.h>
@@ -36,8 +30,8 @@ typedef struct {
 static Section sections[MAPROF_MAX_SECTIONS];
 
 
-static FILE *output_file = NULL;
-#define OUTPUT_STREAM  (output_file ? output_file : stdout)
+static FILE *ostream = NULL;
+#define output()  (ostream ? ostream : stdout)
 
 
 static double get_current_time()
@@ -202,7 +196,7 @@ double maprof_get_effective_throughput(int id, maprof_stat_type type)
 
 void maprof_print(int id, const char *name)
 {
-  FILE *out = OUTPUT_STREAM;
+  FILE *out = output();
   double time, flops, tput, etput;
   int myrank = 0;
 #ifdef USE_MPI
@@ -240,7 +234,7 @@ void maprof_print(int id, const char *name)
 
 void maprof_print_time(int id, const char *name)
 {
-  FILE *out = OUTPUT_STREAM;
+  FILE *out = output();
   int myrank = 0;
   double time = maprof_get_time(id, MAPROF_ROOT);
 #ifdef USE_MPI
@@ -253,7 +247,7 @@ void maprof_print_time(int id, const char *name)
 #ifdef USE_MPI
 void maprof_print_time_mpi(int id, const char *name)
 {
-  FILE *out = OUTPUT_STREAM;
+  FILE *out = output();
   int myrank;
   double time_root = maprof_get_time(id, MAPROF_ROOT);
   double time_min  = maprof_get_time(id, MAPROF_MIN);
@@ -268,7 +262,7 @@ void maprof_print_time_mpi(int id, const char *name)
 
 void maprof_print_time_mpi_full(int id, const char *name)
 {
-  FILE *out = OUTPUT_STREAM;
+  FILE *out = output();
   int myrank;
   double time_root = maprof_get_time(id, MAPROF_ROOT);
   double time_min  = maprof_get_time(id, MAPROF_MIN);
@@ -290,5 +284,5 @@ void maprof_print_time_mpi_full(int id, const char *name)
 
 void maprof_print_to_file(FILE *file)
 {
-  output_file = file;
+  ostream = file;
 }

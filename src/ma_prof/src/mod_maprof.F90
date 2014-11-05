@@ -1,7 +1,3 @@
-! Copyright (C) 2014 RIKEN AICS
-! This library is released under the terms of the MIT license.
-! http://fiber-miniapp.mit-license.org/
-
 module mod_maprof
   use iso_c_binding
 #ifdef USE_MPI
@@ -450,19 +446,10 @@ subroutine maprof_setup(app_name, app_version)
       use iso_c_binding
       integer(c_int), value :: n
     end subroutine maprof_set_num_threads
-
-    subroutine maprof_set_fortran_openacc(n) bind(c)
-      use iso_c_binding
-      integer(c_int), value :: n
-    end subroutine maprof_set_fortran_openacc
   end interface
 
 !$ nt = omp_get_max_threads()
   call maprof_set_num_threads(nt)
-
-#ifdef _OPENACC
-  call maprof_set_fortran_openacc(_OPENACC)
-#endif
 
   call c_setup(c_string(app_name), c_string(app_version))
 

@@ -1,4 +1,4 @@
-subroutine copy_u(ue,mu,ieo)
+subroutine copy_u(ue_t_,mu,ieo)
 !***********************************************************************
 !$Id: copy_u.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
 !
@@ -12,7 +12,7 @@ subroutine copy_u(ue,mu,ieo)
 !
 !***********************************************************************
   implicit none
-  complex(8), intent(inout) :: ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(inout) :: ue_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
   integer, intent(in) :: mu,ieo
   integer :: ic,jc,ieoxyz,itb0,itb1
   integer :: ix,iy,iz,itb,ibuff,jbuff
@@ -32,7 +32,7 @@ subroutine copy_u(ue,mu,ieo)
     itb1 = (1-ieoxyz)*NTH
     do jc=1,COL
     do ic=1,COL
-      ue(ic,jc,itb0,iz,iy,ix,mu)=ue(ic,jc,itb1,iz,iy,ix,mu)
+      ue_t(ic,jc,itb0,iz,iy,ix,mu)=ue_t(ic,jc,itb1,iz,iy,ix,mu)
     enddo
     enddo
   enddo
@@ -50,8 +50,8 @@ subroutine copy_u(ue,mu,ieo)
     do itb=0,NTH
     do jc=1,COL
     do ic=1,COL
-      ue(ic,jc,itb,  0,iy,ix,mu)=ue(ic,jc,itb,NZ,iy,ix,mu)
-      ue(ic,jc,itb,NZ1,iy,ix,mu)=ue(ic,jc,itb, 1,iy,ix,mu)
+      ue_t(ic,jc,itb,  0,iy,ix,mu)=ue_t(ic,jc,itb,NZ,iy,ix,mu)
+      ue_t(ic,jc,itb,NZ1,iy,ix,mu)=ue_t(ic,jc,itb, 1,iy,ix,mu)
     enddo
     enddo
     enddo
@@ -67,8 +67,8 @@ ibuff=0
       ibuff=ibuff+1
       jbuff=ic + (jc-1)*COL + (itb)*COL*COL &
  &             + (iy-1)*COL*COL*(NTH+1) + (ix-1)*COL*COL*(NTH+1)*NY
-      gbuffup(jbuff,1,3)=ue(ic,jc,itb,NZ,iy,ix,mu)
-      gbuffdn(jbuff,1,3)=ue(ic,jc,itb, 1,iy,ix,mu)
+      gbuffup(jbuff,1,3)=ue_t(ic,jc,itb,NZ,iy,ix,mu)
+      gbuffdn(jbuff,1,3)=ue_t(ic,jc,itb, 1,iy,ix,mu)
     enddo
     enddo
     enddo
@@ -87,8 +87,8 @@ ibuff=0
     do itb=0,NTH
     do jc=1,COL
     do ic=1,COL
-      ue(ic,jc,itb,iz,  0,ix,mu)=ue(ic,jc,itb,iz,NY,ix,mu)
-      ue(ic,jc,itb,iz,NY1,ix,mu)=ue(ic,jc,itb,iz, 1,ix,mu)
+      ue_t(ic,jc,itb,iz,  0,ix,mu)=ue_t(ic,jc,itb,iz,NY,ix,mu)
+      ue_t(ic,jc,itb,iz,NY1,ix,mu)=ue_t(ic,jc,itb,iz, 1,ix,mu)
     enddo
     enddo
     enddo
@@ -104,8 +104,8 @@ ibuff=0
       ibuff=ibuff+1
       jbuff=ic + (jc-1)*COL + (itb)*COL*COL &
  &             + (iz-1)*COL*COL*(NTH+1) + (ix-1)*COL*COL*(NTH+1)*NZ
-      gbuffup(jbuff,1,2)=ue(ic,jc,itb,iz,NY,ix,mu)
-      gbuffdn(jbuff,1,2)=ue(ic,jc,itb,iz, 1,ix,mu)
+      gbuffup(jbuff,1,2)=ue_t(ic,jc,itb,iz,NY,ix,mu)
+      gbuffdn(jbuff,1,2)=ue_t(ic,jc,itb,iz, 1,ix,mu)
     enddo
     enddo
     enddo
@@ -124,8 +124,8 @@ ibuff=0
     do itb=0,NTH
     do jc=1,COL
     do ic=1,COL
-      ue(ic,jc,itb,iz,iy,  0,mu)=ue(ic,jc,itb,iz,iy,NX,mu)
-      ue(ic,jc,itb,iz,iy,NX1,mu)=ue(ic,jc,itb,iz,iy, 1,mu)
+      ue_t(ic,jc,itb,iz,iy,  0,mu)=ue_t(ic,jc,itb,iz,iy,NX,mu)
+      ue_t(ic,jc,itb,iz,iy,NX1,mu)=ue_t(ic,jc,itb,iz,iy, 1,mu)
     enddo
     enddo
     enddo
@@ -141,8 +141,8 @@ ibuff=0
       ibuff=ibuff+1
       jbuff=ic + (jc-1)*COL + (itb)*COL*COL &
  &             + (iz-1)*COL*COL*(NTH+1) + (iy-1)*COL*COL*(NTH+1)*NZ
-      gbuffup(jbuff,1,1)=ue(ic,jc,itb,iz,iy,NX,mu)
-      gbuffdn(jbuff,1,1)=ue(ic,jc,itb,iz,iy, 1,mu)
+      gbuffup(jbuff,1,1)=ue_t(ic,jc,itb,iz,iy,NX,mu)
+      gbuffdn(jbuff,1,1)=ue_t(ic,jc,itb,iz,iy, 1,mu)
     enddo
     enddo
     enddo
@@ -173,8 +173,8 @@ ibuff=0
       ibuff=ibuff+1
       jbuff=ic + (jc-1)*COL + (itb)*COL*COL &
  &             + (iy-1)*COL*COL*(NTH+1) + (ix-1)*COL*COL*(NTH+1)*NY
-      ue(ic,jc,itb,  0,iy,ix,mu)=gbuffup(jbuff,2,3)
-      ue(ic,jc,itb,NZ1,iy,ix,mu)=gbuffdn(jbuff,2,3)
+      ue_t(ic,jc,itb,  0,iy,ix,mu)=gbuffup(jbuff,2,3)
+      ue_t(ic,jc,itb,NZ1,iy,ix,mu)=gbuffdn(jbuff,2,3)
     enddo
     enddo
     enddo
@@ -197,8 +197,8 @@ ibuff=0
       ibuff=ibuff+1
       jbuff=ic + (jc-1)*COL + (itb)*COL*COL &
  &             + (iz-1)*COL*COL*(NTH+1) + (ix-1)*COL*COL*(NTH+1)*NZ
-      ue(ic,jc,itb,iz,  0,ix,mu)=gbuffup(jbuff,2,2)
-      ue(ic,jc,itb,iz,NY1,ix,mu)=gbuffdn(jbuff,2,2)
+      ue_t(ic,jc,itb,iz,  0,ix,mu)=gbuffup(jbuff,2,2)
+      ue_t(ic,jc,itb,iz,NY1,ix,mu)=gbuffdn(jbuff,2,2)
     enddo
     enddo
     enddo
@@ -221,8 +221,8 @@ ibuff=0
       ibuff=ibuff+1
       jbuff=ic + (jc-1)*COL + (itb)*COL*COL &
  &             + (iz-1)*COL*COL*(NTH+1) + (iy-1)*COL*COL*(NTH+1)*NZ
-      ue(ic,jc,itb,iz,iy,  0,mu)=gbuffup(jbuff,2,1)
-      ue(ic,jc,itb,iz,iy,NX1,mu)=gbuffdn(jbuff,2,1)
+      ue_t(ic,jc,itb,iz,iy,  0,mu)=gbuffup(jbuff,2,1)
+      ue_t(ic,jc,itb,iz,iy,NX1,mu)=gbuffdn(jbuff,2,1)
     enddo
     enddo
     enddo
@@ -242,7 +242,7 @@ ibuff=0
     itb1=(1-ieoxyz)*NTH
     do jc=1,COL
     do ic=1,COL
-      ue(ic,jc,itb0,iz,iy,ix,mu)=ue(ic,jc,itb1,iz,iy,ix,mu)
+      ue_t(ic,jc,itb0,iz,iy,ix,mu)=ue_t(ic,jc,itb1,iz,iy,ix,mu)
     enddo
     enddo
   enddo
@@ -257,7 +257,7 @@ ibuff=0
     itb1=(1-ieoxyz)*NTH
     do jc=1,COL
     do ic=1,COL
-      ue(ic,jc,itb0,iz,iy,ix,mu)=ue(ic,jc,itb1,iz,iy,ix,mu)
+      ue_t(ic,jc,itb0,iz,iy,ix,mu)=ue_t(ic,jc,itb1,iz,iy,ix,mu)
     enddo
     enddo
   enddo
@@ -272,7 +272,7 @@ ibuff=0
     itb1=(1-ieoxyz)*NTH
     do jc=1,COL
     do ic=1,COL
-      ue(ic,jc,itb0,iz,iy,ix,mu)=ue(ic,jc,itb1,iz,iy,ix,mu)
+      ue_t(ic,jc,itb0,iz,iy,ix,mu)=ue_t(ic,jc,itb1,iz,iy,ix,mu)
     enddo
     enddo
   enddo
@@ -287,10 +287,10 @@ ibuff=0
     do itb=0,NTH
     do jc=1,COL
     do ic=1,COL
-      ue(ic,jc,itb,iz,  0,  0,mu)=ue(ic,jc,itb,iz,  0,NX,mu)
-      ue(ic,jc,itb,iz,NY1,  0,mu)=ue(ic,jc,itb,iz,NY1,NX,mu)
-      ue(ic,jc,itb,iz,  0,NX1,mu)=ue(ic,jc,itb,iz,  0, 1,mu)
-      ue(ic,jc,itb,iz,NY1,NX1,mu)=ue(ic,jc,itb,iz,NY1, 1,mu)
+      ue_t(ic,jc,itb,iz,  0,  0,mu)=ue_t(ic,jc,itb,iz,  0,NX,mu)
+      ue_t(ic,jc,itb,iz,NY1,  0,mu)=ue_t(ic,jc,itb,iz,NY1,NX,mu)
+      ue_t(ic,jc,itb,iz,  0,NX1,mu)=ue_t(ic,jc,itb,iz,  0, 1,mu)
+      ue_t(ic,jc,itb,iz,NY1,NX1,mu)=ue_t(ic,jc,itb,iz,NY1, 1,mu)
     enddo
     enddo
     enddo
@@ -302,10 +302,10 @@ ibuff=0
     do jc=1,COL
     do ic=1,COL
       ibuff=ibuff+2
-      gbuffup(ibuff-1,1,4)=ue(ic,jc,itb,iz,  0,NX,mu)
-      gbuffup(ibuff  ,1,4)=ue(ic,jc,itb,iz,NY1,NX,mu)
-      gbuffdn(ibuff-1,1,4)=ue(ic,jc,itb,iz,  0, 1,mu)
-      gbuffdn(ibuff  ,1,4)=ue(ic,jc,itb,iz,NY1, 1,mu)
+      gbuffup(ibuff-1,1,4)=ue_t(ic,jc,itb,iz,  0,NX,mu)
+      gbuffup(ibuff  ,1,4)=ue_t(ic,jc,itb,iz,NY1,NX,mu)
+      gbuffdn(ibuff-1,1,4)=ue_t(ic,jc,itb,iz,  0, 1,mu)
+      gbuffdn(ibuff  ,1,4)=ue_t(ic,jc,itb,iz,NY1, 1,mu)
     enddo
     enddo
     enddo
@@ -321,10 +321,10 @@ ibuff=0
     do itb=0,NTH
     do jc=1,COL
     do ic=1,COL
-      ue(ic,jc,itb,  0,iy,  0,mu)=ue(ic,jc,itb,  0,iy,NX,mu)
-      ue(ic,jc,itb,NZ1,iy,  0,mu)=ue(ic,jc,itb,NZ1,iy,NX,mu)
-      ue(ic,jc,itb,  0,iy,NX1,mu)=ue(ic,jc,itb,  0,iy, 1,mu)
-      ue(ic,jc,itb,NZ1,iy,NX1,mu)=ue(ic,jc,itb,NZ1,iy, 1,mu)
+      ue_t(ic,jc,itb,  0,iy,  0,mu)=ue_t(ic,jc,itb,  0,iy,NX,mu)
+      ue_t(ic,jc,itb,NZ1,iy,  0,mu)=ue_t(ic,jc,itb,NZ1,iy,NX,mu)
+      ue_t(ic,jc,itb,  0,iy,NX1,mu)=ue_t(ic,jc,itb,  0,iy, 1,mu)
+      ue_t(ic,jc,itb,NZ1,iy,NX1,mu)=ue_t(ic,jc,itb,NZ1,iy, 1,mu)
     enddo
     enddo
     enddo
@@ -336,10 +336,10 @@ ibuff=0
     do jc=1,COL
     do ic=1,COL
       ibuff=ibuff+2
-      gbuffup(ibuff-1,1,5)=ue(ic,jc,itb,  0,iy,NX,mu)
-      gbuffup(ibuff  ,1,5)=ue(ic,jc,itb,NZ1,iy,NX,mu)
-      gbuffdn(ibuff-1,1,5)=ue(ic,jc,itb,  0,iy, 1,mu)
-      gbuffdn(ibuff  ,1,5)=ue(ic,jc,itb,NZ1,iy, 1,mu)
+      gbuffup(ibuff-1,1,5)=ue_t(ic,jc,itb,  0,iy,NX,mu)
+      gbuffup(ibuff  ,1,5)=ue_t(ic,jc,itb,NZ1,iy,NX,mu)
+      gbuffdn(ibuff-1,1,5)=ue_t(ic,jc,itb,  0,iy, 1,mu)
+      gbuffdn(ibuff  ,1,5)=ue_t(ic,jc,itb,NZ1,iy, 1,mu)
     enddo
     enddo
     enddo
@@ -355,10 +355,10 @@ ibuff=0
     do itb=0,NTH
     do jc=1,COL
     do ic=1,COL
-      ue(ic,jc,itb,  0,  0,ix,mu)=ue(ic,jc,itb,  0,NY,ix,mu)
-      ue(ic,jc,itb,NZ1,  0,ix,mu)=ue(ic,jc,itb,NZ1,NY,ix,mu)
-      ue(ic,jc,itb,  0,NY1,ix,mu)=ue(ic,jc,itb,  0, 1,ix,mu)
-      ue(ic,jc,itb,NZ1,NY1,ix,mu)=ue(ic,jc,itb,NZ1, 1,ix,mu)
+      ue_t(ic,jc,itb,  0,  0,ix,mu)=ue_t(ic,jc,itb,  0,NY,ix,mu)
+      ue_t(ic,jc,itb,NZ1,  0,ix,mu)=ue_t(ic,jc,itb,NZ1,NY,ix,mu)
+      ue_t(ic,jc,itb,  0,NY1,ix,mu)=ue_t(ic,jc,itb,  0, 1,ix,mu)
+      ue_t(ic,jc,itb,NZ1,NY1,ix,mu)=ue_t(ic,jc,itb,NZ1, 1,ix,mu)
     enddo
     enddo
     enddo
@@ -370,10 +370,10 @@ ibuff=0
     do jc=1,COL
     do ic=1,COL
       ibuff=ibuff+2
-      gbuffup(ibuff-1,1,6)=ue(ic,jc,itb,  0,NY,ix,mu)
-      gbuffup(ibuff  ,1,6)=ue(ic,jc,itb,NZ1,NY,ix,mu)
-      gbuffdn(ibuff-1,1,6)=ue(ic,jc,itb,  0, 1,ix,mu)
-      gbuffdn(ibuff  ,1,6)=ue(ic,jc,itb,NZ1, 1,ix,mu)
+      gbuffup(ibuff-1,1,6)=ue_t(ic,jc,itb,  0,NY,ix,mu)
+      gbuffup(ibuff  ,1,6)=ue_t(ic,jc,itb,NZ1,NY,ix,mu)
+      gbuffdn(ibuff-1,1,6)=ue_t(ic,jc,itb,  0, 1,ix,mu)
+      gbuffdn(ibuff  ,1,6)=ue_t(ic,jc,itb,NZ1, 1,ix,mu)
     enddo
     enddo
     enddo
@@ -397,10 +397,10 @@ ibuff=0
     do jc=1,COL
     do ic=1,COL
       ibuff=ibuff+2
-      ue(ic,jc,itb,iz,  0,  0,mu)=gbuffup(ibuff-1,2,4)
-      ue(ic,jc,itb,iz,NY1,  0,mu)=gbuffup(ibuff  ,2,4)
-      ue(ic,jc,itb,iz,  0,NX1,mu)=gbuffdn(ibuff-1,2,4)
-      ue(ic,jc,itb,iz,NY1,NX1,mu)=gbuffdn(ibuff  ,2,4)
+      ue_t(ic,jc,itb,iz,  0,  0,mu)=gbuffup(ibuff-1,2,4)
+      ue_t(ic,jc,itb,iz,NY1,  0,mu)=gbuffup(ibuff  ,2,4)
+      ue_t(ic,jc,itb,iz,  0,NX1,mu)=gbuffdn(ibuff-1,2,4)
+      ue_t(ic,jc,itb,iz,NY1,NX1,mu)=gbuffdn(ibuff  ,2,4)
     enddo
     enddo
     enddo
@@ -416,10 +416,10 @@ ibuff=0
     do jc=1,COL
     do ic=1,COL
       ibuff=ibuff+2
-      ue(ic,jc,itb,  0,iy,  0,mu)=gbuffup(ibuff-1,2,5)
-      ue(ic,jc,itb,NZ1,iy,  0,mu)=gbuffup(ibuff  ,2,5)
-      ue(ic,jc,itb,  0,iy,NX1,mu)=gbuffdn(ibuff-1,2,5)
-      ue(ic,jc,itb,NZ1,iy,NX1,mu)=gbuffdn(ibuff  ,2,5)
+      ue_t(ic,jc,itb,  0,iy,  0,mu)=gbuffup(ibuff-1,2,5)
+      ue_t(ic,jc,itb,NZ1,iy,  0,mu)=gbuffup(ibuff  ,2,5)
+      ue_t(ic,jc,itb,  0,iy,NX1,mu)=gbuffdn(ibuff-1,2,5)
+      ue_t(ic,jc,itb,NZ1,iy,NX1,mu)=gbuffdn(ibuff  ,2,5)
     enddo
     enddo
     enddo
@@ -437,10 +437,10 @@ ibuff=0
     do jc=1,COL
     do ic=1,COL
       ibuff=ibuff+2
-      ue(ic,jc,itb,  0,  0,ix,mu)=gbuffup(ibuff-1,2,6)
-      ue(ic,jc,itb,NZ1,  0,ix,mu)=gbuffup(ibuff  ,2,6)
-      ue(ic,jc,itb,  0,NY1,ix,mu)=gbuffdn(ibuff-1,2,6)
-      ue(ic,jc,itb,NZ1,NY1,ix,mu)=gbuffdn(ibuff  ,2,6)
+      ue_t(ic,jc,itb,  0,  0,ix,mu)=gbuffup(ibuff-1,2,6)
+      ue_t(ic,jc,itb,NZ1,  0,ix,mu)=gbuffup(ibuff  ,2,6)
+      ue_t(ic,jc,itb,  0,NY1,ix,mu)=gbuffdn(ibuff-1,2,6)
+      ue_t(ic,jc,itb,NZ1,NY1,ix,mu)=gbuffdn(ibuff  ,2,6)
     enddo
     enddo
     enddo
@@ -455,8 +455,8 @@ ibuff=0
   do itb = 0,NTH
     do jc = 1,COL
     do ic = 1,COL
-      ue(ic,jc,itb,  0,iy,ix,mu)=ue(ic,jc,itb,NZ,iy,ix,mu)
-      ue(ic,jc,itb,NZ1,iy,ix,mu)=ue(ic,jc,itb, 1,iy,ix,mu)
+      ue_t(ic,jc,itb,  0,iy,ix,mu)=ue_t(ic,jc,itb,NZ,iy,ix,mu)
+      ue_t(ic,jc,itb,NZ1,iy,ix,mu)=ue_t(ic,jc,itb, 1,iy,ix,mu)
     enddo
     enddo
   enddo
@@ -469,8 +469,8 @@ ibuff=0
   do itb = 0,NTH
     do jc = 1,COL
     do ic = 1,COL
-      ue(ic,jc,itb,iz,  0,ix,mu)=ue(ic,jc,itb,iz,NY,ix,mu)
-      ue(ic,jc,itb,iz,NY1,ix,mu)=ue(ic,jc,itb,iz, 1,ix,mu)
+      ue_t(ic,jc,itb,iz,  0,ix,mu)=ue_t(ic,jc,itb,iz,NY,ix,mu)
+      ue_t(ic,jc,itb,iz,NY1,ix,mu)=ue_t(ic,jc,itb,iz, 1,ix,mu)
     enddo
     enddo
   enddo
@@ -483,8 +483,8 @@ ibuff=0
   do itb = 0,NTH
     do jc = 1,COL
     do ic = 1,COL
-      ue(ic,jc,itb,iz,iy,  0,mu)=ue(ic,jc,itb,iz,iy,NX,mu)
-      ue(ic,jc,itb,iz,iy,NX1,mu)=ue(ic,jc,itb,iz,iy, 1,mu)
+      ue_t(ic,jc,itb,iz,iy,  0,mu)=ue_t(ic,jc,itb,iz,iy,NX,mu)
+      ue_t(ic,jc,itb,iz,iy,NX1,mu)=ue_t(ic,jc,itb,iz,iy, 1,mu)
     enddo
     enddo
   enddo

@@ -16,14 +16,6 @@ program ccs_qcd_solver_bench
   use mod_maprof
   implicit none
 !***********************************************************************
-  complex(8) ::  ye(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
-  complex(8) ::  yo(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
-  complex(8) :: yde(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
-  complex(8) ::  ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
-  complex(8) ::  uo(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
-  complex(8) :: fclinve(CLSPH,0:NTH,NZ,NY,NX,2)
-  complex(8) :: fclinvo(CLSPH,0:NTH,NZ,NY,NX,2)
-
   complex(8) ::  ye_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
   complex(8) ::  yo_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
   complex(8) :: yde_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
@@ -34,8 +26,8 @@ program ccs_qcd_solver_bench
   complex(8) :: myo_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
 
 
-  complex(8), allocatable :: ucle(:,:,:,:,:,:,:)
-  complex(8), allocatable :: uclo(:,:,:,:,:,:,:)
+  complex(8), allocatable :: ucle_t(:,:,:,:,:,:,:)
+  complex(8), allocatable :: uclo_t(:,:,:,:,:,:,:)
   real(8) :: bicg_dp_flop, tclv_flop, flop
   real(8) :: bicg_st_min_ops, bicg_ld_min_ops, stops, ldops
   real(8) :: kappa,csw,tol,logdetfcl
@@ -109,20 +101,24 @@ program ccs_qcd_solver_bench
 ! (ue,uo) and (ye,yo)
 ! with Gaussian rand. num.
 !***************************
-  call init_u_and_y(ue,uo,ye,yo)
+  call init_u_and_y(ue_t_,uo_t_,ye_t_,yo_t_)
 
 !***************************
 ! calculate clover term
 !***************************
+  allocate(ucle_t(COL,COL,NTH,NZ,NY,NX,NDIM*(NDIM-1)/2))
+  allocate(uclo_t(COL,COL,NTH,NZ,NY,NX,NDIM*(NDIM-1)/2))
+!$acc enter data pcopyin(ue_t_,uo_t_)  pcreate(fclinve_t_,fclinvo_t_)
+!$acc data  pcreate(ucle_t_,uclo_t_) async(0)
   call xclock(etime0,8)
   call maprof_time_start(SEC_CLOVER)
-  allocate(ucle(COL,COL,NTH,NZ,NY,NX,NDIM*(NDIM-1)/2))
-  allocate(uclo(COL,COL,NTH,NZ,NY,NX,NDIM*(NDIM-1)/2))
-  call clover(ucle,uclo,ue,uo)
-  call clvinv(kappa,csw,fclinve,fclinvo,ucle,uclo,logdetfcl,1)
-  deallocate(ucle,uclo)
+  call clover(ucle_t_,uclo_t_,ue_t_,uo_t_)
+  call clvinv(kappa,csw,fclinve_t_,fclinvo_t_,ucle_t_,uclo_t_,logdetfcl,1)
   call xclock(etime1,8)
   call maprof_time_stop(SEC_CLOVER)      
+!$acc end data
+!$acc wait(0)
+  deallocate(ucle_t_,uclo_t_)
   clv_etime=clv_etime+(etime1-etime0)
   if (nodeid==0) then
     write(*,*)
@@ -132,56 +128,7 @@ program ccs_qcd_solver_bench
 !  tclv_flop = 18.d0*(880.d0 + 93.d0*(-1 + NDIM)*NDIM)*NTH*NX*NY*NZ
   tclv_flop = flop_count_clover + flop_count_clvinv
   call maprof_set_fp_ops(SEC_CLOVER, tclv_flop)
-  call output(ue,uo,ye,yo)
-
-!************************
-! transpose
-!************************
-  do idim=1,NDIM
-  do ix=0,NX1
-  do iy=0,NY1
-  do iz=0,NZ1
-  do ith=0,NTH
-  do jc=1,COL
-  do ic=1,COL
-     ue_t(ic,jc,ith,iz,iy,ix,idim) = ue(ic,jc,ith,iz,iy,ix,idim)
-     uo_t(ic,jc,ith,iz,iy,ix,idim) = uo(ic,jc,ith,iz,iy,ix,idim)
-  enddo
-  enddo
-  enddo
-  enddo
-  enddo
-  enddo
-  enddo
-
-  do ix=0,NX1
-  do iy=0,NY1
-  do iz=0,NZ1
-  do ith=0,NTH
-  do is=1,SPIN
-  do ic=1,COL
-     ye_t(ic,is,ith,iz,iy,ix) = ye(ic,is,ith,iz,iy,ix) 
-  enddo
-  enddo
-  enddo
-  enddo
-  enddo
-  enddo
-
-  do is=1,2
-  do ix=1,NX
-  do iy=1,NY
-  do iz=1,NZ
-  do ith=0,NTH
-  do ic=1,CLSPH
-     fclinve_t(ic,ith,iz,iy,ix,is) = fclinve(ic,ith,iz,iy,ix,is) 
-     fclinvo_t(ic,ith,iz,iy,ix,is) = fclinvo(ic,ith,iz,iy,ix,is) 
-  enddo
-  enddo
-  enddo
-  enddo
-  enddo
-  enddo
+  call output(ue_t_,uo_t_,ye_t_,yo_t_)
 
 !************************
 ! BiCGStab test
@@ -206,7 +153,7 @@ program ccs_qcd_solver_bench
   bicg_dp_etime = bicg_dp_etime + etime2
 
   bicg_total_etime = bicg_total_etime + (etime1-etime0)
-  call output(ue,uo,ye,yo)
+  call output(ue_t_,uo_t_,ye_t_,yo_t_)
 
 !************************
 ! check residual
@@ -214,27 +161,8 @@ program ccs_qcd_solver_bench
 !   A x => yde
 !************************
   call mult_mb_pre(kappa,yde_t_,yo_t_,ue_t_,uo_t_,0,fclinve_t_,fclinvo_t_,myo_t_)
+  !$acc exit data copyout(ue_t_,uo_t_,fclinve_t_,fclinvo_t_)
   !$acc wait
-
-!************************
-! transpose
-!************************
-  do ix=0,NX1
-  do iy=0,NY1
-  do iz=0,NZ1
-  do ith=0,NTH
-  do is=1,SPIN
-  do ic=1,COL
-      yo(ic,is,ith,iz,iy,ix) =  yo_t(ic,is,ith,iz,iy,ix)
-      yde(ic,is,ith,iz,iy,ix) = yde_t(ic,is,ith,iz,iy,ix)
-  enddo
-  enddo
-  enddo
-  enddo
-  enddo
-  enddo
-  !
-
 
   rnorm1=0.0d0
   rnorm2=0.0d0
@@ -246,12 +174,12 @@ program ccs_qcd_solver_bench
     do itb=1-ieoxyz,NTH-ieoxyz
     do is=1,SPIN
     do ic=1,COL
-      rnorm1=rnorm1+ real(ye(ic,is,itb,iz,iy,ix)-yo(ic,is,itb,iz,iy,ix))**2  &
- &                   +aimag(ye(ic,is,itb,iz,iy,ix)-yo(ic,is,itb,iz,iy,ix))**2
-      rnorm2=rnorm2+ real(yo(ic,is,itb,iz,iy,ix))**2  &
- &                   +aimag(yo(ic,is,itb,iz,iy,ix))**2
-      rnorm3=rnorm3+ real(yde(ic,is,itb,iz,iy,ix))**2  &
- &                   +aimag(yde(ic,is,itb,iz,iy,ix))**2
+      rnorm1=rnorm1+ real(ye_t(ic,is,itb,iz,iy,ix)-yo_t(ic,is,itb,iz,iy,ix))**2  &
+ &                   +aimag(ye_t(ic,is,itb,iz,iy,ix)-yo_t(ic,is,itb,iz,iy,ix))**2
+      rnorm2=rnorm2+ real(yo_t(ic,is,itb,iz,iy,ix))**2  &
+ &                   +aimag(yo_t(ic,is,itb,iz,iy,ix))**2
+      rnorm3=rnorm3+ real(yde_t(ic,is,itb,iz,iy,ix))**2  &
+ &                   +aimag(yde_t(ic,is,itb,iz,iy,ix))**2
     enddo
     enddo
     enddo

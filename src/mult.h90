@@ -27,7 +27,7 @@ subroutine mult(yo_t_,FMye_t_,ue_t_,uo_t_,ieo,fclinve_t_)
   !====================================
   ! boundary exchange copy on yo_t
   !====================================
-  call copy_y_t(yo_t_,mod(ieo+1,2))
+  call copy_y(yo_t_,mod(ieo+1,2))
 
   !====================================
   ! hopping 
