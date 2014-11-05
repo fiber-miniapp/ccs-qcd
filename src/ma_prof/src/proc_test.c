@@ -1,9 +1,3 @@
-/*
- * Copyright (C) 2014 RIKEN AICS
- * This library is released under the terms of the MIT license.
- * http://fiber-miniapp.mit-license.org/
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

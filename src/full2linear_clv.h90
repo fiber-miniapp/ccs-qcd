@@ -1,4 +1,4 @@
-subroutine full2linear_clv(f1cl,f2cl,fcl,ieo)
+subroutine full2linear_clv(f1cl_t_,f2cl_t_,fcl_t_,ieo)
 !***********************************************************************
 !$Id: full2linear_clv.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $ 
 ! Transform clover term matrix from full matrix form to linear 
@@ -15,12 +15,12 @@ subroutine full2linear_clv(f1cl,f2cl,fcl,ieo)
 !
 !***********************************************************************
   implicit none
-  complex(8), intent(out) ::  fcl(CLSPH,0:NTH,NZ,NY,NX,2)
-  complex(8), intent(in)  :: f1cl(CLSP/2,CLSP/2,NTH,NZ,NY,NX)
-  complex(8), intent(in)  :: f2cl(CLSP/2,CLSP/2,NTH,NZ,NY,NX)
+  complex(8), intent(out) ::  fcl_t(CLSPH,0:NTH,NZ,NY,NX,2)
+  complex(8), intent(in)  :: f1cl_t(CLSP/2,CLSP/2,NTH,NZ,NY,NX)
+  complex(8), intent(in)  :: f2cl_t(CLSP/2,CLSP/2,NTH,NZ,NY,NX)
   integer, intent(in) :: ieo
 !************
-  integer :: ix,iy,iz,itb,itb0,ieoxyz
+  integer :: ix,iy,iz,ith,itb,itb0,ieoxyz
 
 !********************************************
 ! transform  full form -> linear form (hermitian matrix)
@@ -40,62 +40,66 @@ subroutine full2linear_clv(f1cl,f2cl,fcl,ieo)
 !         |                     21 |
 !
 !********************************************
-!$OMP PARALLEL DO PRIVATE(iy,iz,ieoxyz,itb,itb0)
+  !$acc kernels pcopy(fcl_t_) pcopyin(f1cl_t_,f2cl_t_) async(0)
+  !$acc loop collapse(4) independent gang vector(128) 
+  !$OMP PARALLEL DO PRIVATE(iy,iz,ieoxyz,itb,ith,itb0) COLLAPSE(2)
   do ix=1,NX
   do iy=1,NY
   do iz=1,NZ
+  do ith=1,NTH
     ieoxyz=mod(ipeo+ix+iy+iz+ieo,2)
+    itb = ith -ieoxyz
+    itb0= itb +ieoxyz
+    
+      fcl_t( 1,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(1,1,itb0,iz,iy,ix)
+      fcl_t( 2,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(1,2,itb0,iz,iy,ix)
+      fcl_t( 3,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(1,3,itb0,iz,iy,ix)
+      fcl_t( 4,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(1,4,itb0,iz,iy,ix)
+      fcl_t( 5,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(1,5,itb0,iz,iy,ix)
+      fcl_t( 6,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(1,6,itb0,iz,iy,ix)
+      fcl_t( 7,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(2,2,itb0,iz,iy,ix)
+      fcl_t( 8,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(2,3,itb0,iz,iy,ix)
+      fcl_t( 9,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(2,4,itb0,iz,iy,ix)
+      fcl_t(10,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(2,5,itb0,iz,iy,ix)
+      fcl_t(11,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(2,6,itb0,iz,iy,ix)
+      fcl_t(12,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(3,3,itb0,iz,iy,ix)
+      fcl_t(13,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(3,4,itb0,iz,iy,ix)
+      fcl_t(14,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(3,5,itb0,iz,iy,ix)
+      fcl_t(15,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(3,6,itb0,iz,iy,ix)
+      fcl_t(16,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(4,4,itb0,iz,iy,ix)
+      fcl_t(17,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(4,5,itb0,iz,iy,ix)
+      fcl_t(18,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(4,6,itb0,iz,iy,ix)
+      fcl_t(19,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(5,5,itb0,iz,iy,ix)
+      fcl_t(20,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(5,6,itb0,iz,iy,ix)
+      fcl_t(21,itb,iz,iy,ix,1)= 0.5d0*f1cl_t(6,6,itb0,iz,iy,ix)
 
-    do itb=1-ieoxyz,NTH-ieoxyz
-      itb0=itb+ieoxyz
-      fcl( 1,itb,iz,iy,ix,1)= 0.5d0*f1cl(1,1,itb0,iz,iy,ix)
-      fcl( 2,itb,iz,iy,ix,1)= 0.5d0*f1cl(1,2,itb0,iz,iy,ix)
-      fcl( 3,itb,iz,iy,ix,1)= 0.5d0*f1cl(1,3,itb0,iz,iy,ix)
-      fcl( 4,itb,iz,iy,ix,1)= 0.5d0*f1cl(1,4,itb0,iz,iy,ix)
-      fcl( 5,itb,iz,iy,ix,1)= 0.5d0*f1cl(1,5,itb0,iz,iy,ix)
-      fcl( 6,itb,iz,iy,ix,1)= 0.5d0*f1cl(1,6,itb0,iz,iy,ix)
-      fcl( 7,itb,iz,iy,ix,1)= 0.5d0*f1cl(2,2,itb0,iz,iy,ix)
-      fcl( 8,itb,iz,iy,ix,1)= 0.5d0*f1cl(2,3,itb0,iz,iy,ix)
-      fcl( 9,itb,iz,iy,ix,1)= 0.5d0*f1cl(2,4,itb0,iz,iy,ix)
-      fcl(10,itb,iz,iy,ix,1)= 0.5d0*f1cl(2,5,itb0,iz,iy,ix)
-      fcl(11,itb,iz,iy,ix,1)= 0.5d0*f1cl(2,6,itb0,iz,iy,ix)
-      fcl(12,itb,iz,iy,ix,1)= 0.5d0*f1cl(3,3,itb0,iz,iy,ix)
-      fcl(13,itb,iz,iy,ix,1)= 0.5d0*f1cl(3,4,itb0,iz,iy,ix)
-      fcl(14,itb,iz,iy,ix,1)= 0.5d0*f1cl(3,5,itb0,iz,iy,ix)
-      fcl(15,itb,iz,iy,ix,1)= 0.5d0*f1cl(3,6,itb0,iz,iy,ix)
-      fcl(16,itb,iz,iy,ix,1)= 0.5d0*f1cl(4,4,itb0,iz,iy,ix)
-      fcl(17,itb,iz,iy,ix,1)= 0.5d0*f1cl(4,5,itb0,iz,iy,ix)
-      fcl(18,itb,iz,iy,ix,1)= 0.5d0*f1cl(4,6,itb0,iz,iy,ix)
-      fcl(19,itb,iz,iy,ix,1)= 0.5d0*f1cl(5,5,itb0,iz,iy,ix)
-      fcl(20,itb,iz,iy,ix,1)= 0.5d0*f1cl(5,6,itb0,iz,iy,ix)
-      fcl(21,itb,iz,iy,ix,1)= 0.5d0*f1cl(6,6,itb0,iz,iy,ix)
+      fcl_t( 1,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(1,1,itb0,iz,iy,ix)
+      fcl_t( 2,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(1,2,itb0,iz,iy,ix)
+      fcl_t( 3,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(1,3,itb0,iz,iy,ix)
+      fcl_t( 4,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(1,4,itb0,iz,iy,ix)
+      fcl_t( 5,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(1,5,itb0,iz,iy,ix)
+      fcl_t( 6,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(1,6,itb0,iz,iy,ix)
+      fcl_t( 7,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(2,2,itb0,iz,iy,ix)
+      fcl_t( 8,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(2,3,itb0,iz,iy,ix)
+      fcl_t( 9,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(2,4,itb0,iz,iy,ix)
+      fcl_t(10,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(2,5,itb0,iz,iy,ix)
+      fcl_t(11,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(2,6,itb0,iz,iy,ix)
+      fcl_t(12,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(3,3,itb0,iz,iy,ix)
+      fcl_t(13,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(3,4,itb0,iz,iy,ix)
+      fcl_t(14,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(3,5,itb0,iz,iy,ix)
+      fcl_t(15,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(3,6,itb0,iz,iy,ix)
+      fcl_t(16,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(4,4,itb0,iz,iy,ix)
+      fcl_t(17,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(4,5,itb0,iz,iy,ix)
+      fcl_t(18,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(4,6,itb0,iz,iy,ix)
+      fcl_t(19,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(5,5,itb0,iz,iy,ix)
+      fcl_t(20,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(5,6,itb0,iz,iy,ix)
+      fcl_t(21,itb,iz,iy,ix,2)= 0.5d0*f2cl_t(6,6,itb0,iz,iy,ix)
 
-      fcl( 1,itb,iz,iy,ix,2)= 0.5d0*f2cl(1,1,itb0,iz,iy,ix)
-      fcl( 2,itb,iz,iy,ix,2)= 0.5d0*f2cl(1,2,itb0,iz,iy,ix)
-      fcl( 3,itb,iz,iy,ix,2)= 0.5d0*f2cl(1,3,itb0,iz,iy,ix)
-      fcl( 4,itb,iz,iy,ix,2)= 0.5d0*f2cl(1,4,itb0,iz,iy,ix)
-      fcl( 5,itb,iz,iy,ix,2)= 0.5d0*f2cl(1,5,itb0,iz,iy,ix)
-      fcl( 6,itb,iz,iy,ix,2)= 0.5d0*f2cl(1,6,itb0,iz,iy,ix)
-      fcl( 7,itb,iz,iy,ix,2)= 0.5d0*f2cl(2,2,itb0,iz,iy,ix)
-      fcl( 8,itb,iz,iy,ix,2)= 0.5d0*f2cl(2,3,itb0,iz,iy,ix)
-      fcl( 9,itb,iz,iy,ix,2)= 0.5d0*f2cl(2,4,itb0,iz,iy,ix)
-      fcl(10,itb,iz,iy,ix,2)= 0.5d0*f2cl(2,5,itb0,iz,iy,ix)
-      fcl(11,itb,iz,iy,ix,2)= 0.5d0*f2cl(2,6,itb0,iz,iy,ix)
-      fcl(12,itb,iz,iy,ix,2)= 0.5d0*f2cl(3,3,itb0,iz,iy,ix)
-      fcl(13,itb,iz,iy,ix,2)= 0.5d0*f2cl(3,4,itb0,iz,iy,ix)
-      fcl(14,itb,iz,iy,ix,2)= 0.5d0*f2cl(3,5,itb0,iz,iy,ix)
-      fcl(15,itb,iz,iy,ix,2)= 0.5d0*f2cl(3,6,itb0,iz,iy,ix)
-      fcl(16,itb,iz,iy,ix,2)= 0.5d0*f2cl(4,4,itb0,iz,iy,ix)
-      fcl(17,itb,iz,iy,ix,2)= 0.5d0*f2cl(4,5,itb0,iz,iy,ix)
-      fcl(18,itb,iz,iy,ix,2)= 0.5d0*f2cl(4,6,itb0,iz,iy,ix)
-      fcl(19,itb,iz,iy,ix,2)= 0.5d0*f2cl(5,5,itb0,iz,iy,ix)
-      fcl(20,itb,iz,iy,ix,2)= 0.5d0*f2cl(5,6,itb0,iz,iy,ix)
-      fcl(21,itb,iz,iy,ix,2)= 0.5d0*f2cl(6,6,itb0,iz,iy,ix)
-    enddo
-
+  enddo
   enddo
   enddo
   enddo ! end of do ix,iy,iz
-
+  !$acc end kernels
+ 
   return
 end subroutine

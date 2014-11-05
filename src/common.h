@@ -46,13 +46,35 @@
 ! for OpenACC
 !******************************************
 #ifdef _OPENACC
-#define       ye_t(x1,x2,x3,x4,x5,x6)      ye_t_(x3,x4,x5,x6,x1,x2)
-#define       yo_t(x1,x2,x3,x4,x5,x6)      yo_t_(x3,x4,x5,x6,x1,x2)
-#define      yde_t(x1,x2,x3,x4,x5,x6)     yde_t_(x3,x4,x5,x6,x1,x2)
-#define       ue_t(x1,x2,x3,x4,x5,x6,x7)   ue_t_(x3,x4,x5,x6,x1,x2,x7)
-#define       uo_t(x1,x2,x3,x4,x5,x6,x7)   uo_t_(x3,x4,x5,x6,x1,x2,x7)
+#define  ye_t(x1,x2,x3,x4,x5,x6)      ye_t_(x3,x4,x5,x6,x1,x2)
+#define  yo_t(x1,x2,x3,x4,x5,x6)      yo_t_(x3,x4,x5,x6,x1,x2)
+#define yde_t(x1,x2,x3,x4,x5,x6)      yde_t_(x3,x4,x5,x6,x1,x2)
+#define  ue_t(x1,x2,x3,x4,x5,x6,x7)   ue_t_(x3,x4,x5,x6,x1,x2,x7)
+#define  uo_t(x1,x2,x3,x4,x5,x6,x7)   uo_t_(x3,x4,x5,x6,x1,x2,x7)
 #define  fclinve_t(x1,x2,x3,x4,x5,x6) fclinve_t_(x2,x3,x4,x5,x1,x6)
 #define  fclinvo_t(x1,x2,x3,x4,x5,x6) fclinvo_t_(x2,x3,x4,x5,x1,x6)
+#define  fcl_t(x1,x2,x3,x4,x5,x6)     fcl_t_(x2,x3,x4,x5,x1,x6)
+
+#define  ucle_t(x1,x2,x3,x4,x5,x6,x7) ucle_t_(x3,x4,x5,x6,x1,x2,x7)
+#define  uclo_t(x1,x2,x3,x4,x5,x6,x7) uclo_t_(x3,x4,x5,x6,x1,x2,x7)
+#define   wce_t(x1,x2,x3,x4,x5,x6,x7)  wce_t_(x3,x4,x5,x6,x1,x2,x7)
+#define   wco_t(x1,x2,x3,x4,x5,x6,x7)  wco_t_(x3,x4,x5,x6,x1,x2,x7)
+#define    ve_t(x1,x2,x3,x4,x5,x6)      ve_t_(x3,x4,x5,x6,x1,x2)
+#define    vo_t(x1,x2,x3,x4,x5,x6)      vo_t_(x3,x4,x5,x6,x1,x2)
+
+#define     f1cl_t(x1,x2,x3,x4,x5,x6)      f1cl_t_(x3,x4,x5,x6,x1,x2)
+#define     f2cl_t(x1,x2,x3,x4,x5,x6)      f2cl_t_(x3,x4,x5,x6,x1,x2)
+#define  f1clinv_t(x1,x2,x3,x4,x5,x6)   f1clinv_t_(x3,x4,x5,x6,x1,x2)
+#define  f2clinv_t(x1,x2,x3,x4,x5,x6)   f2clinv_t_(x3,x4,x5,x6,x1,x2)
+
+#define  bbe_t(x1,x2,x3,x4,x5,x6)      bbe_t_(x3,x4,x5,x6,x1,x2)
+#define   Ae_t(x1,x2,x3,x4,x5,x6)       Ae_t_(x3,x4,x5,x6,x1,x2)
+#define  AAe_t(x1,x2,x3,x4,x5,x6)      AAe_t_(x3,x4,x5,x6,x1,x2)
+#define    a_t(x1,x2,x3,x4,x5,x6)        a_t_(x3,x4,x5,x6,x1,x2)
+#define    b_t(x1,x2,x3,x4,x5,x6)        b_t_(x3,x4,x5,x6,x1,x2)
+
+#define f1cle_t(x1,x2,x3,x4,x5,x6)      f1cle_t_(x3,x4,x5,x6,x1,x2)
+#define f2cle_t(x1,x2,x3,x4,x5,x6)      f2cle_t_(x3,x4,x5,x6,x1,x2)
 
 #define  be_t(x1,x2,x3,x4,x5,x6)    be_t_(x3,x4,x5,x6,x1,x2)
 #define  xe_t(x1,x2,x3,x4,x5,x6)    xe_t_(x3,x4,x5,x6,x1,x2)
@@ -62,18 +84,40 @@
 #define  qe_t(x1,x2,x3,x4,x5,x6)    qe_t_(x3,x4,x5,x6,x1,x2)
 #define  re_t(x1,x2,x3,x4,x5,x6)    re_t_(x3,x4,x5,x6,x1,x2)
 
-#define  myo_t(x1,x2,x3,x4,x5,x6)      myo_t_(x3,x4,x5,x6,x1,x2)
-#define  Myo_t(x1,x2,x3,x4,x5,x6)      Myo_t_(x3,x4,x5,x6,x1,x2)
-#define FMye_t(x1,x2,x3,x4,x5,x6)     FMye_t_(x3,x4,x5,x6,x1,x2)
+#define myo_t(x1,x2,x3,x4,x5,x6)    myo_t_ (x3,x4,x5,x6,x1,x2)
+#define Myo_t(x1,x2,x3,x4,x5,x6)    Myo_t_ (x3,x4,x5,x6,x1,x2)
+#define FMye_t(x1,x2,x3,x4,x5,x6)   FMye_t_(x3,x4,x5,x6,x1,x2)
 
 #else
-#define       ye_t(x1,x2,x3,x4,x5,x6)       ye_t_(x1,x2,x3,x4,x5,x6)     
-#define       yo_t(x1,x2,x3,x4,x5,x6)       yo_t_(x1,x2,x3,x4,x5,x6)     
-#define      yde_t(x1,x2,x3,x4,x5,x6)      yde_t_(x1,x2,x3,x4,x5,x6)     
-#define       ue_t(x1,x2,x3,x4,x5,x6,x7)    ue_t_(x1,x2,x3,x4,x5,x6,x7)  
-#define       uo_t(x1,x2,x3,x4,x5,x6,x7)    uo_t_(x1,x2,x3,x4,x5,x6,x7)  
+#define  ye_t(x1,x2,x3,x4,x5,x6)       ye_t_(x1,x2,x3,x4,x5,x6)     
+#define  yo_t(x1,x2,x3,x4,x5,x6)       yo_t_(x1,x2,x3,x4,x5,x6)     
+#define yde_t(x1,x2,x3,x4,x5,x6)      yde_t_(x1,x2,x3,x4,x5,x6)     
+#define  ue_t(x1,x2,x3,x4,x5,x6,x7)    ue_t_(x1,x2,x3,x4,x5,x6,x7)  
+#define  uo_t(x1,x2,x3,x4,x5,x6,x7)    uo_t_(x1,x2,x3,x4,x5,x6,x7)  
 #define  fclinve_t(x1,x2,x3,x4,x5,x6)  fclinve_t_(x1,x2,x3,x4,x5,x6)
 #define  fclinvo_t(x1,x2,x3,x4,x5,x6)  fclinvo_t_(x1,x2,x3,x4,x5,x6)
+#define  fcl_t(x1,x2,x3,x4,x5,x6)      fcl_t_(x1,x2,x3,x4,x5,x6)
+
+#define  ucle_t(x1,x2,x3,x4,x5,x6,x7) ucle_t_(x1,x2,x3,x4,x5,x6,x7)
+#define  uclo_t(x1,x2,x3,x4,x5,x6,x7) uclo_t_(x1,x2,x3,x4,x5,x6,x7)
+#define   wce_t(x1,x2,x3,x4,x5,x6,x7)  wce_t_(x1,x2,x3,x4,x5,x6,x7)
+#define   wco_t(x1,x2,x3,x4,x5,x6,x7)  wco_t_(x1,x2,x3,x4,x5,x6,x7)
+#define    ve_t(x1,x2,x3,x4,x5,x6)      ve_t_(x1,x2,x3,x4,x5,x6)
+#define    vo_t(x1,x2,x3,x4,x5,x6)      vo_t_(x1,x2,x3,x4,x5,x6)
+
+#define     f1cl_t(x1,x2,x3,x4,x5,x6)      f1cl_t_(x1,x2,x3,x4,x5,x6)
+#define     f2cl_t(x1,x2,x3,x4,x5,x6)      f2cl_t_(x1,x2,x3,x4,x5,x6)
+#define  f1clinv_t(x1,x2,x3,x4,x5,x6)   f1clinv_t_(x1,x2,x3,x4,x5,x6)
+#define  f2clinv_t(x1,x2,x3,x4,x5,x6)   f2clinv_t_(x1,x2,x3,x4,x5,x6)
+
+#define  bbe_t(x1,x2,x3,x4,x5,x6)      bbe_t_(x1,x2,x3,x4,x5,x6)
+#define   Ae_t(x1,x2,x3,x4,x5,x6)       Ae_t_(x1,x2,x3,x4,x5,x6)
+#define  AAe_t(x1,x2,x3,x4,x5,x6)      AAe_t_(x1,x2,x3,x4,x5,x6)
+#define    a_t(x1,x2,x3,x4,x5,x6)        a_t_(x1,x2,x3,x4,x5,x6)
+#define    b_t(x1,x2,x3,x4,x5,x6)        b_t_(x1,x2,x3,x4,x5,x6)
+
+#define  f1cle_t(x1,x2,x3,x4,x5,x6)      f1cle_t_(x1,x2,x3,x4,x5,x6)
+#define  f2cle_t(x1,x2,x3,x4,x5,x6)      f2cle_t_(x1,x2,x3,x4,x5,x6)
 
 #define  be_t(x1,x2,x3,x4,x5,x6)    be_t_(x1,x2,x3,x4,x5,x6)
 #define  xe_t(x1,x2,x3,x4,x5,x6)    xe_t_(x1,x2,x3,x4,x5,x6)
@@ -83,9 +127,9 @@
 #define  qe_t(x1,x2,x3,x4,x5,x6)    qe_t_(x1,x2,x3,x4,x5,x6)
 #define  re_t(x1,x2,x3,x4,x5,x6)    re_t_(x1,x2,x3,x4,x5,x6)
 
-#define   myo_t(x1,x2,x3,x4,x5,x6)   myo_t_(x1,x2,x3,x4,x5,x6)
-#define   Myo_t(x1,x2,x3,x4,x5,x6)   Myo_t_(x1,x2,x3,x4,x5,x6)
-#define  FMye_t(x1,x2,x3,x4,x5,x6)  FMye_t_(x1,x2,x3,x4,x5,x6)
+#define myo_t(x1,x2,x3,x4,x5,x6)     myo_t_(x1,x2,x3,x4,x5,x6)
+#define Myo_t(x1,x2,x3,x4,x5,x6)     Myo_t_(x1,x2,x3,x4,x5,x6)
+#define FMye_t(x1,x2,x3,x4,x5,x6)    FMye_t_(x1,x2,x3,x4,x5,x6)
 #endif
 
 

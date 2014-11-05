@@ -1,9 +1,9 @@
-subroutine gauss_y(ye,ieo)
+subroutine gauss_y(ye_t_,ieo)
 !***********************************************************************
 !$Id: gauss_y.h90,v 1.2 2009/12/04 14:42:27 ishikawa Exp $
 ! Generate gaussian noize vector for single boson
 !
-!   ye: even/odd site vector
+!  ye : even/odd site vector
 ! ieo : 0 for even, 1 for odd
 !
 !***********************************************************************
@@ -11,7 +11,7 @@ subroutine gauss_y(ye,ieo)
   integer :: NCSTB
   parameter (NCSTB=COL*SPIN*NTH)
   integer, intent(in) :: ieo
-  complex(8), intent(out) :: ye(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(out) :: ye_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
   real(8) :: pi2
   real(8) :: yr(NCSTB),cth(NCSTB),sth(NCSTB)
   integer :: ix,iy,iz,itb,ieoxyz,is,icstb
@@ -83,7 +83,7 @@ subroutine gauss_y(ye,ieo)
     do itb=1-ieoxyz,NTH-ieoxyz
       do is=1,SPIN
       do ic=1,COL
-        ye(ic,is,itb,iz,iy,ix)=yr(ic+COL*(is-1)+CLSP*(itb+ieoxyz-1))*   &
+        ye_t(ic,is,itb,iz,iy,ix)=yr(ic+COL*(is-1)+CLSP*(itb+ieoxyz-1))*   &
  &                     dcmplx(cth(ic+COL*(is-1)+CLSP*(itb+ieoxyz-1)),   &
  &                            sth(ic+COL*(is-1)+CLSP*(itb+ieoxyz-1)))
       enddo

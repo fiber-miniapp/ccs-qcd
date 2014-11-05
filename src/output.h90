@@ -1,5 +1,4 @@
-#define _X_    itb,iz,iy,ix
-subroutine output(ue,uo,ye,yo)
+subroutine output(ue_t_,uo_t_,ye_t_,yo_t_)
 !***********************************************************************
 !$Id: output.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
 ! Output fermion vector complex sum all.
@@ -9,10 +8,10 @@ subroutine output(ue,uo,ye,yo)
 !
 !***********************************************************************
   implicit none
-  complex(8), intent(in) :: ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
-  complex(8), intent(in) :: uo(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
-  complex(8), intent(in) :: ye(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
-  complex(8), intent(in) :: yo(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(in) :: ue_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(in) :: uo_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(in) :: ye_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
+  complex(8), intent(in) :: yo_t(COL,SPIN,0:NTH,0:NZ1,0:NY1,0:NX1)
   integer :: ix,iy,iz,itb,ieoxyz,ic,is,jc,mu
   complex(8) :: sum_u,sum_f
 
@@ -27,13 +26,13 @@ subroutine output(ue,uo,ye,yo)
       do mu=1,NDIM
       do jc=1,COL
       do ic=1,COL
-        sum_u=sum_u+ue(ic,jc,_X_,mu)
+        sum_u=sum_u+ue_t(ic,jc,itb,iz,iy,ix,mu)
       enddo
       enddo
       enddo
       do is=1,SPIN
       do ic=1,COL
-        sum_f=sum_f+ye(ic,is,_X_)
+        sum_f=sum_f+ye_t(ic,is,itb,iz,iy,ix)
       enddo
       enddo
     enddo
@@ -42,13 +41,13 @@ subroutine output(ue,uo,ye,yo)
       do mu=1,NDIM
       do jc=1,COL
       do ic=1,COL
-        sum_u=sum_u+uo(ic,jc,_X_,mu)
+        sum_u=sum_u+uo_t(ic,jc,itb,iz,iy,ix,mu)
       enddo
       enddo
       enddo
       do is=1,SPIN
       do ic=1,COL
-        sum_f=sum_f+yo(ic,is,_X_)
+        sum_f=sum_f+yo_t(ic,is,itb,iz,iy,ix)
       enddo
       enddo
     enddo
@@ -69,4 +68,3 @@ subroutine output(ue,uo,ye,yo)
 
   return
 end subroutine
-#undef _X_

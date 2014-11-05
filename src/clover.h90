@@ -1,4 +1,4 @@
-  subroutine clover(ucle,uclo,ue,uo)
+  subroutine clover(ucle_t_,uclo_t_,ue_t_,uo_t_)
 !***********************************************************************
 !$Id: clover.h90,v 1.1 2009/12/02 10:24:23 ishikawa Exp $
 ! Calculate clover term for SW(clover) fermion in chiral representation
@@ -12,18 +12,18 @@
 !
 !***********************************************************************
   implicit none
-  complex(8), intent(in) :: ue(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
-  complex(8), intent(in) :: uo(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(in) :: ue_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
+  complex(8), intent(in) :: uo_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM)
   complex(8), intent(out)::  &
- &                       ucle(COL,COL,NTH,NZ,NY,NX,NDIM*(NDIM-1)/2),  &
- &                       uclo(COL,COL,NTH,NZ,NY,NX,NDIM*(NDIM-1)/2)
+ &                       ucle_t(COL,COL,NTH,NZ,NY,NX,NDIM*(NDIM-1)/2),  &
+ &                       uclo_t(COL,COL,NTH,NZ,NY,NX,NDIM*(NDIM-1)/2)
 !*********** 
-  complex(8), allocatable :: wce(:,:,:,:,:,:,:)
-  complex(8), allocatable :: wco(:,:,:,:,:,:,:)
-  complex(8), allocatable :: ve(:,:,:,:,:,:)
-  complex(8), allocatable :: vo(:,:,:,:,:,:)
+  complex(8), allocatable :: wce_t(:,:,:,:,:,:,:)
+  complex(8), allocatable :: wco_t(:,:,:,:,:,:,:)
+  complex(8), allocatable :: ve_t(:,:,:,:,:,:)
+  complex(8), allocatable :: vo_t(:,:,:,:,:,:)
   integer :: mu,nu,ipl,ic,jc
-  integer :: ix,iy,iz,itb,ieoxyz
+  integer :: ix,iy,iz,itb,ith,ieoxyz
   integer :: ixlow,iylow,izlow,itlow
   integer :: ixhig,iyhig,izhig,ithig
   integer :: itb0
@@ -36,11 +36,12 @@
   complex(8) :: zid8
   complex(8), parameter :: zi=(0.0d0,1.0d0)
 
-  allocate(wce(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM))
-  allocate(wco(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM))
-  allocate(ve(COL,COL,NTH,NZ,NY,NX))
-  allocate(vo(COL,COL,NTH,NZ,NY,NX))
+  allocate(wce_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM))
+  allocate(wco_t(COL,COL,0:NTH,0:NZ1,0:NY1,0:NX1,NDIM))
+  allocate(ve_t(COL,COL,NTH,NZ,NY,NX))
+  allocate(vo_t(COL,COL,NTH,NZ,NY,NX))
 
+!$acc data pcopy(ue_t_,uo_t_, ucle_t_,uclo_t_) pcreate(wce_t_,wco_t_,ve_t_,vo_t_) async(0)
 
   zid8=-zi/8.0d0
 !***********************************************************************
@@ -67,10 +68,25 @@
     iylow = 1-isy(mu)-isy(nu)
     izlow = 1-isz(mu)-isz(nu)
     itlow = 1-ist(mu)-ist(nu)
-!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ic,jc,ix2,iy2,iz2,itb2,ix4,iy4,iz4,itb4) COLLAPSE(2)
-    do ix=ixlow,NX
-    do iy=iylow,NY
-    do iz=izlow,NZ
+#ifdef _OPENACC
+ !$acc kernels pcopy(wce_t_,wco_t_) pcopyin(ue_t_,uo_t_) async(0)
+ !$acc loop collapse(6) independent gang vector(128) 
+  do jc = 1,COL
+  do ic = 1,COL
+  do ix=ixlow,NX
+  do iy=iylow,NY
+  do iz=izlow,NZ
+  do ith=0,NTH
+#else
+  !$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ith,ic,jc,ix2,iy2,iz2,itb2,ix4,iy4,iz4,itb4) COLLAPSE(2)
+  do ix=ixlow,NX
+  do iy=iylow,NY
+  do iz=izlow,NZ
+  do ith=0,NTH
+  do jc = 1,COL
+  do ic = 1,COL
+#endif
+
       ieoxyz=mod(ipeo+ix+iy+iz,2)
       ix2=ix+isx(mu)
       iy2=iy+isy(mu)
@@ -79,69 +95,64 @@
       iy4=iy+isy(nu)
       iz4=iz+isz(nu)
 
-      do itb=(1-ieoxyz)*itlow,NTH-ieoxyz
-        !  198 flop
-        do jc = 1,COL
-        do ic = 1,COL
-          wce(ic,jc,itb,iz,iy,ix,1)=  &
- &              conjg(ue( 1,ic,itb ,iz ,iy ,ix ,nu))*  &
- &                    ue( 1,jc,itb ,iz ,iy ,ix ,mu)    &
- &             +conjg(ue( 2,ic,itb ,iz ,iy ,ix ,nu))*  &
- &                    ue( 2,jc,itb ,iz ,iy ,ix ,mu)    &
- &             +conjg(ue( 3,ic,itb ,iz ,iy ,ix ,nu))*  &
- &                    ue( 3,jc,itb ,iz ,iy ,ix ,mu)
-        enddo
-        enddo
-      enddo
-      do itb=(ieoxyz)*itlow,NTH+ieoxyz-1
-        !  198 flop
-        do jc = 1,COL
-        do ic = 1,COL
-          wco(ic,jc,itb,iz,iy,ix,1)=  &
- &              conjg(uo( 1,ic,itb ,iz ,iy ,ix ,nu))*  &
- &                    uo( 1,jc,itb ,iz ,iy ,ix ,mu)    &
- &             +conjg(uo( 2,ic,itb ,iz ,iy ,ix ,nu))*  &
- &                    uo( 2,jc,itb ,iz ,iy ,ix ,mu)    &
- &             +conjg(uo( 3,ic,itb ,iz ,iy ,ix ,nu))*  &
- &                    uo( 3,jc,itb ,iz ,iy ,ix ,mu)
-        enddo
-        enddo
-      enddo
-      do itb=(1-ieoxyz)*itlow,NTH-ieoxyz
-        itb2=itb+ieoxyz*ist(mu)
-        itb4=itb+ieoxyz*ist(nu)
-        !  198 flop
-        do jc = 1,COL
-        do ic = 1,COL
-          wce(ic,jc,itb,iz,iy,ix,2) =   &
- &                    uo(ic, 1,itb2,iz2,iy2,ix2,nu) *  &
- &              conjg(uo(jc, 1,itb4,iz4,iy4,ix4,mu))   &
- &             +      uo(ic, 2,itb2,iz2,iy2,ix2,nu) *  &
- &              conjg(uo(jc, 2,itb4,iz4,iy4,ix4,mu))   &
- &             +      uo(ic, 3,itb2,iz2,iy2,ix2,nu) *  &
- &              conjg(uo(jc, 3,itb4,iz4,iy4,ix4,mu))
-        enddo
-        enddo
-      enddo
-      do itb=(ieoxyz)*itlow,NTH+ieoxyz-1
-        itb2=itb+(1-ieoxyz)*ist(mu)
-        itb4=itb+(1-ieoxyz)*ist(nu)
-        !  198 flop
-        do jc = 1,COL
-        do ic = 1,COL
-          wco(ic,jc,itb,iz,iy,ix,2) =   &
- &                    ue(ic, 1,itb2,iz2,iy2,ix2,nu) *  &
- &              conjg(ue(jc, 1,itb4,iz4,iy4,ix4,mu))   &
- &             +      ue(ic, 2,itb2,iz2,iy2,ix2,nu) *  &
- &              conjg(ue(jc, 2,itb4,iz4,iy4,ix4,mu))   &
- &             +      ue(ic, 3,itb2,iz2,iy2,ix2,nu) *  &
- &              conjg(ue(jc, 3,itb4,iz4,iy4,ix4,mu))
-        enddo
-        enddo
-      enddo
+      itb=ith-ieoxyz
+      if(itb.le.0) then
+       itb=0
+      endif
+      wce_t(ic,jc,itb,iz,iy,ix,1)=  &
+ &           conjg(ue_t( 1,ic,itb ,iz ,iy ,ix ,nu))*  &
+ &                 ue_t( 1,jc,itb ,iz ,iy ,ix ,mu)    &
+ &          +conjg(ue_t( 2,ic,itb ,iz ,iy ,ix ,nu))*  &
+ &                 ue_t( 2,jc,itb ,iz ,iy ,ix ,mu)    &
+ &          +conjg(ue_t( 3,ic,itb ,iz ,iy ,ix ,nu))*  &
+ &                 ue_t( 3,jc,itb ,iz ,iy ,ix ,mu)
+      
+      itb=ith+ieoxyz-1      
+      if(itb.le.0) then
+       itb=0
+      endif
+      wco_t(ic,jc,itb,iz,iy,ix,1)=  &
+ &           conjg(uo_t( 1,ic,itb ,iz ,iy ,ix ,nu))*  &
+ &                 uo_t( 1,jc,itb ,iz ,iy ,ix ,mu)    &
+ &          +conjg(uo_t( 2,ic,itb ,iz ,iy ,ix ,nu))*  &
+ &                 uo_t( 2,jc,itb ,iz ,iy ,ix ,mu)    &
+ &          +conjg(uo_t( 3,ic,itb ,iz ,iy ,ix ,nu))*  &
+ &                 uo_t( 3,jc,itb ,iz ,iy ,ix ,mu)
+
+      itb=ith-ieoxyz
+      if(itb.le.0) then
+       itb=0
+      endif
+      itb2=itb+ieoxyz*ist(mu)
+      itb4=itb+ieoxyz*ist(nu)
+      wce_t(ic,jc,itb,iz,iy,ix,2) =   &
+ &                    uo_t(ic, 1,itb2,iz2,iy2,ix2,nu) *  &
+ &              conjg(uo_t(jc, 1,itb4,iz4,iy4,ix4,mu))   &
+ &             +      uo_t(ic, 2,itb2,iz2,iy2,ix2,nu) *  &
+ &              conjg(uo_t(jc, 2,itb4,iz4,iy4,ix4,mu))   &
+ &             +      uo_t(ic, 3,itb2,iz2,iy2,ix2,nu) *  &
+ &              conjg(uo_t(jc, 3,itb4,iz4,iy4,ix4,mu))
+
+      itb=ith+ieoxyz-1      
+      if(itb.le.0) then
+       itb=0
+      endif
+      itb2=itb+(1-ieoxyz)*ist(mu)
+      itb4=itb+(1-ieoxyz)*ist(nu)
+      wco_t(ic,jc,itb,iz,iy,ix,2) =   &
+ &                    ue_t(ic, 1,itb2,iz2,iy2,ix2,nu) *  &
+ &              conjg(ue_t(jc, 1,itb4,iz4,iy4,ix4,mu))   &
+ &             +      ue_t(ic, 2,itb2,iz2,iy2,ix2,nu) *  &
+ &              conjg(ue_t(jc, 2,itb4,iz4,iy4,ix4,mu))   &
+ &             +      ue_t(ic, 3,itb2,iz2,iy2,ix2,nu) *  &
+ &              conjg(ue_t(jc, 3,itb4,iz4,iy4,ix4,mu))
+    enddo
+    enddo
+    enddo
     enddo
     enddo
     enddo ! end of do ix,iy,iz
+!$acc end kernels
 
 !***********************************************************************
 ! lower plaquette
@@ -162,10 +173,26 @@
     iyhig = NY+isy(nu)
     izhig = NZ+isz(nu)
     ithig = 1-ist(nu)
-!$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ic,jc,ix5,iy5,iz5,itb5,ix6,iy6,iz6,itb6) COLLAPSE(2)
+#ifdef _OPENACC
+    !$acc kernels pcopy(wce_t_,wco_t_) pcopyin(ue_t_,uo_t_) async(0)
+    !$acc loop collapse(6) independent gang vector(128) 
+    do jc = 1,COL
+    do ic = 1,COL
     do ix=ixlow,ixhig
     do iy=iylow,iyhig
     do iz=izlow,izhig
+    do ith=0,NTH
+
+#else
+    !$OMP PARALLEL DO PRIVATE(ix,iy,iz,ieoxyz,itb,ith,ic,jc,ix5,iy5,iz5,itb5,ix6,iy6,iz6,itb6) COLLAPSE(2)
+    do ix=ixlow,ixhig
+    do iy=iylow,iyhig
+    do iz=izlow,izhig
+    do ith=0,NTH
+    do jc = 1,COL
+    do ic = 1,COL
+#endif
+
       ieoxyz=mod(ipeo+ix+iy+iz,2)
       ix5=ix-isx(nu)
       iy5=iy-isy(nu)
@@ -174,71 +201,66 @@
       iy6=iy5+isy(mu)
       iz6=iz5+isz(mu)
 
-      do itb=(1-ieoxyz)*itlow,NTH-(ieoxyz)*ithig
-        itb5=itb-(1-ieoxyz)*ist(nu)
-        !  198 flop
-        do jc = 1,COL
-        do ic = 1,COL
-          wce(ic,jc,itb,iz,iy,ix,3) =   &
- &              conjg(ue( 1,ic,itb ,iz ,iy ,ix ,mu))*  &
- &              conjg(uo(jc, 1,itb5,iz5,iy5,ix5,nu))   &
- &             +conjg(ue( 2,ic,itb ,iz ,iy ,ix ,mu))*  &
- &              conjg(uo(jc, 2,itb5,iz5,iy5,ix5,nu))   &
- &             +conjg(ue( 3,ic,itb ,iz ,iy ,ix ,mu))*  &
- &              conjg(uo(jc, 3,itb5,iz5,iy5,ix5,nu))
-        enddo
-        enddo
-      enddo
-      do itb=(ieoxyz)*itlow,NTH+(ieoxyz-1)*ithig
-        itb5=itb-  (ieoxyz)*ist(nu)
-        !  198 flop
-        do jc = 1,COL
-        do ic = 1,COL
-          wco(ic,jc,itb,iz,iy,ix,3) =   &
- &              conjg(uo( 1,ic,itb ,iz ,iy ,ix ,mu))*  &
- &              conjg(ue(jc, 1,itb5,iz5,iy5,ix5,nu))   &
- &             +conjg(uo( 2,ic,itb ,iz ,iy ,ix ,mu))*  &
- &              conjg(ue(jc, 2,itb5,iz5,iy5,ix5,nu))   &
- &             +conjg(uo( 3,ic,itb ,iz ,iy ,ix ,mu))*  &
- &              conjg(ue(jc, 3,itb5,iz5,iy5,ix5,nu))
-        enddo
-        enddo
-      enddo
-      do itb=(1-ieoxyz)*itlow,NTH-(ieoxyz)*ithig
-        itb5=itb-(1-ieoxyz)*ist(nu)
-        itb6=itb5  +ieoxyz *ist(mu)
-        !  198 flop
-        do jc = 1,COL
-        do ic = 1,COL
-          wce(ic,jc,itb,iz,iy,ix,4) =  &
- &                    uo(ic, 1,itb5,iz5,iy5,ix5,mu)*  &
- &                    ue( 1,jc,itb6,iz6,iy6,ix6,nu)   &
- &             +      uo(ic, 2,itb5,iz5,iy5,ix5,mu)*  &
- &                    ue( 2,jc,itb6,iz6,iy6,ix6,nu)   &
- &             +      uo(ic, 3,itb5,iz5,iy5,ix5,mu)*  &
- &                    ue( 3,jc,itb6,iz6,iy6,ix6,nu)
-        enddo
-        enddo
-      enddo
-      do itb=(ieoxyz)*itlow,NTH+(ieoxyz-1)*ithig
-        itb5=itb    -ieoxyz *ist(nu)
-        itb6=itb5+(1-ieoxyz)*ist(mu)
-        !  198 flop
-        do jc = 1,COL
-        do ic = 1,COL
-          wco(ic,jc,itb,iz,iy,ix,4) =  &
- &                    ue(ic, 1,itb5,iz5,iy5,ix5,mu)*  &
- &                    uo( 1,jc,itb6,iz6,iy6,ix6,nu)   &
- &             +      ue(ic, 2,itb5,iz5,iy5,ix5,mu)*  &
- &                    uo( 2,jc,itb6,iz6,iy6,ix6,nu)   &
- &             +      ue(ic, 3,itb5,iz5,iy5,ix5,mu)*  &
- &                    uo( 3,jc,itb6,iz6,iy6,ix6,nu)
-        enddo
-        enddo
-      enddo
+      itb=ith+(1-ieoxyz)
+      if(itb.ge.NTH) then
+       itb=NTH
+      endif
+      itb5=itb-(1-ieoxyz)*ist(nu)
+      wce_t(ic,jc,itb,iz,iy,ix,3) =   &
+ &              conjg(ue_t( 1,ic,itb ,iz ,iy ,ix ,mu))*  &
+ &              conjg(uo_t(jc, 1,itb5,iz5,iy5,ix5,nu))   &
+ &             +conjg(ue_t( 2,ic,itb ,iz ,iy ,ix ,mu))*  &
+ &              conjg(uo_t(jc, 2,itb5,iz5,iy5,ix5,nu))   &
+ &             +conjg(ue_t( 3,ic,itb ,iz ,iy ,ix ,mu))*  &
+ &              conjg(uo_t(jc, 3,itb5,iz5,iy5,ix5,nu))
+
+      itb=ith+ieoxyz
+      if(itb.ge.NTH) then
+       itb=NTH
+      endif
+      itb5=itb-(ieoxyz)*ist(nu)
+      wco_t(ic,jc,itb,iz,iy,ix,3) =   &
+ &              conjg(uo_t( 1,ic,itb ,iz ,iy ,ix ,mu))*  &
+ &              conjg(ue_t(jc, 1,itb5,iz5,iy5,ix5,nu))   &
+ &             +conjg(uo_t( 2,ic,itb ,iz ,iy ,ix ,mu))*  &
+ &              conjg(ue_t(jc, 2,itb5,iz5,iy5,ix5,nu))   &
+ &             +conjg(uo_t( 3,ic,itb ,iz ,iy ,ix ,mu))*  &
+ &              conjg(ue_t(jc, 3,itb5,iz5,iy5,ix5,nu))
+
+      itb=ith+(1-ieoxyz)
+      if(itb.ge.NTH) then
+       itb=NTH
+      endif
+      itb5=itb-(1-ieoxyz)*ist(nu)
+      itb6=itb5  +ieoxyz *ist(mu)
+      wce_t(ic,jc,itb,iz,iy,ix,4) =  &
+ &                    uo_t(ic, 1,itb5,iz5,iy5,ix5,mu)*  &
+ &                    ue_t( 1,jc,itb6,iz6,iy6,ix6,nu)   &
+ &             +      uo_t(ic, 2,itb5,iz5,iy5,ix5,mu)*  &
+ &                    ue_t( 2,jc,itb6,iz6,iy6,ix6,nu)   &
+ &             +      uo_t(ic, 3,itb5,iz5,iy5,ix5,mu)*  &
+ &                    ue_t( 3,jc,itb6,iz6,iy6,ix6,nu)
+
+      itb=ith+ieoxyz
+      if(itb.ge.NTH) then
+       itb=NTH
+      endif
+      itb5=itb    -ieoxyz *ist(nu)
+      itb6=itb5+(1-ieoxyz)*ist(mu)
+       wco_t(ic,jc,itb,iz,iy,ix,4) =  &
+ &                    ue_t(ic, 1,itb5,iz5,iy5,ix5,mu)*  &
+ &                    uo_t( 1,jc,itb6,iz6,iy6,ix6,nu)   &
+ &             +      ue_t(ic, 2,itb5,iz5,iy5,ix5,mu)*  &
+ &                    uo_t( 2,jc,itb6,iz6,iy6,ix6,nu)   &
+ &             +      ue_t(ic, 3,itb5,iz5,iy5,ix5,mu)*  &
+ &                    uo_t( 3,jc,itb6,iz6,iy6,ix6,nu)
+    enddo
+    enddo
+    enddo
     enddo
     enddo
     enddo ! end of do ix,iy,iz
+!$acc end kernels
 
 !***********************************************************************
 ! form clover leaves and calculate F_{mu,nu}
@@ -256,11 +278,27 @@
 !     --->---  3--->---
 !
 !***********************************************************************
-!$OMP PARALLEL PRIVATE(ix,iy,iz,ieoxyz,itb,ic,jc,itb0,ix1,iy1,iz1,itb1,ix2,iy2,iz2,itb2,ix3,iy3,iz3,itb3)
-!$OMP DO COLLAPSE(2)
+
+#ifdef _OPENACC
+    !$acc kernels pcopy(wce_t_,wco_t_,ve_t_,vo_t_) pcopyin(ue_t_,uo_t_) async(0)
+    !$acc loop collapse(6) independent gang vector(128) 
+    do jc=1,COL
+    do ic=1,COL
     do ix=1,NX
     do iy=1,NY
     do iz=1,NZ
+    do ith=1,NTH
+#else
+    !$OMP PARALLEL PRIVATE(ix,iy,iz,ieoxyz,itb,ith,ic,jc,itb0,ix1,iy1,iz1,itb1,ix2,iy2,iz2,itb2,ix3,iy3,iz3,itb3)
+    !$OMP DO COLLAPSE(2)
+    do ix=1,NX
+    do iy=1,NY
+    do iz=1,NZ
+    do ith=1,NTH
+    do jc=1,COL
+    do ic=1,COL
+#endif
+
       ieoxyz=mod(ipeo+ix+iy+iz,2)
       ix1=ix+isx(nu)
       iy1=iy+isy(nu)
@@ -272,81 +310,107 @@
       iy3=iy-isy(nu)
       iz3=iz-isz(nu)
 
-      do itb=1-ieoxyz,NTH-ieoxyz
-        itb0=itb+ieoxyz
-        itb1=itb   +ieoxyz *ist(nu)               
-        itb2=itb-(1-ieoxyz)*ist(mu)               
-        itb3=itb-(1-ieoxyz)*ist(nu)               
+      itb=ith-ieoxyz
+      itb0=itb+ieoxyz
+      itb1=itb   +ieoxyz *ist(nu)               
+      itb2=itb-(1-ieoxyz)*ist(mu)               
+      itb3=itb-(1-ieoxyz)*ist(nu)               
+       !  846 flop
+      ve_t(ic,jc,itb0,iz,iy,ix) =   &
+ &         wco_t(ic,1,itb1,iz1,iy1,ix1,4)*wco_t(1,jc,itb1,iz1,iy1,ix1,3)  &
+ &        +wco_t(ic,2,itb1,iz1,iy1,ix1,4)*wco_t(2,jc,itb1,iz1,iy1,ix1,3)  &
+ &        +wco_t(ic,3,itb1,iz1,iy1,ix1,4)*wco_t(3,jc,itb1,iz1,iy1,ix1,3)  &
+ &        +wco_t(ic,1,itb2,iz2,iy2,ix2,2)*wco_t(1,jc,itb2,iz2,iy2,ix2,1)  &
+ &        +wco_t(ic,2,itb2,iz2,iy2,ix2,2)*wco_t(2,jc,itb2,iz2,iy2,ix2,1)  &
+ &        +wco_t(ic,3,itb2,iz2,iy2,ix2,2)*wco_t(3,jc,itb2,iz2,iy2,ix2,1)  &
+ &        +wco_t(ic,1,itb2,iz2,iy2,ix2,3)*wco_t(1,jc,itb2,iz2,iy2,ix2,4)  &
+ &        +wco_t(ic,2,itb2,iz2,iy2,ix2,3)*wco_t(2,jc,itb2,iz2,iy2,ix2,4)  &
+ &        +wco_t(ic,3,itb2,iz2,iy2,ix2,3)*wco_t(3,jc,itb2,iz2,iy2,ix2,4)  &
+ &        +wco_t(ic,1,itb3,iz3,iy3,ix3,1)*wco_t(1,jc,itb3,iz3,iy3,ix3,2)  &
+ &        +wco_t(ic,2,itb3,iz3,iy3,ix3,1)*wco_t(2,jc,itb3,iz3,iy3,ix3,2)  &
+ &        +wco_t(ic,3,itb3,iz3,iy3,ix3,1)*wco_t(3,jc,itb3,iz3,iy3,ix3,2)
+
+      itb=ith+ieoxyz-1
+      itb0=itb+ 1-ieoxyz
+      itb1=itb+(1-ieoxyz)*ist(nu)               
+      itb2=itb   -ieoxyz *ist(mu)               
+      itb3=itb   -ieoxyz *ist(nu)               
         !  846 flop
-        do jc=1,COL
-        do ic=1,COL
-          ve(ic,jc,itb0,iz,iy,ix) =   &
- &         wco(ic,1,itb1,iz1,iy1,ix1,4)*wco(1,jc,itb1,iz1,iy1,ix1,3)  &
- &        +wco(ic,2,itb1,iz1,iy1,ix1,4)*wco(2,jc,itb1,iz1,iy1,ix1,3)  &
- &        +wco(ic,3,itb1,iz1,iy1,ix1,4)*wco(3,jc,itb1,iz1,iy1,ix1,3)  &
- &        +wco(ic,1,itb2,iz2,iy2,ix2,2)*wco(1,jc,itb2,iz2,iy2,ix2,1)  &
- &        +wco(ic,2,itb2,iz2,iy2,ix2,2)*wco(2,jc,itb2,iz2,iy2,ix2,1)  &
- &        +wco(ic,3,itb2,iz2,iy2,ix2,2)*wco(3,jc,itb2,iz2,iy2,ix2,1)  &
- &        +wco(ic,1,itb2,iz2,iy2,ix2,3)*wco(1,jc,itb2,iz2,iy2,ix2,4)  &
- &        +wco(ic,2,itb2,iz2,iy2,ix2,3)*wco(2,jc,itb2,iz2,iy2,ix2,4)  &
- &        +wco(ic,3,itb2,iz2,iy2,ix2,3)*wco(3,jc,itb2,iz2,iy2,ix2,4)  &
- &        +wco(ic,1,itb3,iz3,iy3,ix3,1)*wco(1,jc,itb3,iz3,iy3,ix3,2)  &
- &        +wco(ic,2,itb3,iz3,iy3,ix3,1)*wco(2,jc,itb3,iz3,iy3,ix3,2)  &
- &        +wco(ic,3,itb3,iz3,iy3,ix3,1)*wco(3,jc,itb3,iz3,iy3,ix3,2)
-        enddo
-        enddo
-      enddo
-      do itb=ieoxyz,NTH+ieoxyz-1
-        itb0=itb+ 1-ieoxyz
-        itb1=itb+(1-ieoxyz)*ist(nu)               
-        itb2=itb   -ieoxyz *ist(mu)               
-        itb3=itb   -ieoxyz *ist(nu)               
-        !  846 flop
-        do jc=1,COL
-        do ic=1,COL
-          vo(ic,jc,itb0,iz,iy,ix) =   &
- &         wce(ic,1,itb1,iz1,iy1,ix1,4)*wce(1,jc,itb1,iz1,iy1,ix1,3)  &
- &        +wce(ic,2,itb1,iz1,iy1,ix1,4)*wce(2,jc,itb1,iz1,iy1,ix1,3)  &
- &        +wce(ic,3,itb1,iz1,iy1,ix1,4)*wce(3,jc,itb1,iz1,iy1,ix1,3)  &
- &        +wce(ic,1,itb2,iz2,iy2,ix2,2)*wce(1,jc,itb2,iz2,iy2,ix2,1)  &
- &        +wce(ic,2,itb2,iz2,iy2,ix2,2)*wce(2,jc,itb2,iz2,iy2,ix2,1)  &
- &        +wce(ic,3,itb2,iz2,iy2,ix2,2)*wce(3,jc,itb2,iz2,iy2,ix2,1)  &
- &        +wce(ic,1,itb2,iz2,iy2,ix2,3)*wce(1,jc,itb2,iz2,iy2,ix2,4)  &
- &        +wce(ic,2,itb2,iz2,iy2,ix2,3)*wce(2,jc,itb2,iz2,iy2,ix2,4)  &
- &        +wce(ic,3,itb2,iz2,iy2,ix2,3)*wce(3,jc,itb2,iz2,iy2,ix2,4)  &
- &        +wce(ic,1,itb3,iz3,iy3,ix3,1)*wce(1,jc,itb3,iz3,iy3,ix3,2)  &
- &        +wce(ic,2,itb3,iz3,iy3,ix3,1)*wce(2,jc,itb3,iz3,iy3,ix3,2)  &
- &        +wce(ic,3,itb3,iz3,iy3,ix3,1)*wce(3,jc,itb3,iz3,iy3,ix3,2)
-        enddo
-        enddo
-      enddo
+      vo_t(ic,jc,itb0,iz,iy,ix) =   &
+ &         wce_t(ic,1,itb1,iz1,iy1,ix1,4)*wce_t(1,jc,itb1,iz1,iy1,ix1,3)  &
+ &        +wce_t(ic,2,itb1,iz1,iy1,ix1,4)*wce_t(2,jc,itb1,iz1,iy1,ix1,3)  &
+ &        +wce_t(ic,3,itb1,iz1,iy1,ix1,4)*wce_t(3,jc,itb1,iz1,iy1,ix1,3)  &
+ &        +wce_t(ic,1,itb2,iz2,iy2,ix2,2)*wce_t(1,jc,itb2,iz2,iy2,ix2,1)  &
+ &        +wce_t(ic,2,itb2,iz2,iy2,ix2,2)*wce_t(2,jc,itb2,iz2,iy2,ix2,1)  &
+ &        +wce_t(ic,3,itb2,iz2,iy2,ix2,2)*wce_t(3,jc,itb2,iz2,iy2,ix2,1)  &
+ &        +wce_t(ic,1,itb2,iz2,iy2,ix2,3)*wce_t(1,jc,itb2,iz2,iy2,ix2,4)  &
+ &        +wce_t(ic,2,itb2,iz2,iy2,ix2,3)*wce_t(2,jc,itb2,iz2,iy2,ix2,4)  &
+ &        +wce_t(ic,3,itb2,iz2,iy2,ix2,3)*wce_t(3,jc,itb2,iz2,iy2,ix2,4)  &
+ &        +wce_t(ic,1,itb3,iz3,iy3,ix3,1)*wce_t(1,jc,itb3,iz3,iy3,ix3,2)  &
+ &        +wce_t(ic,2,itb3,iz3,iy3,ix3,1)*wce_t(2,jc,itb3,iz3,iy3,ix3,2)  &
+ &        +wce_t(ic,3,itb3,iz3,iy3,ix3,1)*wce_t(3,jc,itb3,iz3,iy3,ix3,2)
+
+    enddo
+    enddo
+    enddo
+    enddo
+    enddo
+    enddo ! end of do ix,iy,iz
+#ifdef _OPENACC
+    !$acc end kernels
+#else
+    !$OMP END DO
+    !$OMP END PARALLEL
+#endif
 
 !***********************************************************************
 !  total clover (with counter clockwise plaquettes)
 !  ucl(ipl) = -zi ( v - v^{+} ) / 8
 !***********************************************************************
-      do itb=1,NTH
-        !  72*2 flop
-        do jc=1,COL
-        do ic=1,COL
-          ucle(ic,jc,itb,iz,iy,ix,ipl)=  &
- &                    (ve(ic,jc,itb,iz,iy,ix)-conjg(ve(jc,ic,itb,iz,iy,ix)))*zid8
-          uclo(ic,jc,itb,iz,iy,ix,ipl)=  &
- &                    (vo(ic,jc,itb,iz,iy,ix)-conjg(vo(jc,ic,itb,iz,iy,ix)))*zid8
-        enddo
-        enddo
-      enddo
+#ifdef _OPENACC
+    !$acc kernels pcopy(ucle_t_,uclo_t_) pcopyin(ve_t_,vo_t_) async(0)
+    !$acc loop collapse(6) independent gang vector(128) 
+    do jc=1,COL
+    do ic=1,COL
+    do ix=1,NX
+    do iy=1,NY
+    do iz=1,NZ
+    do itb=1,NTH
+#else
+   !$OMP PARALLEL PRIVATE(ix,iy,iz,itb,ic,jc)
+   !$OMP DO COLLAPSE(2)
+    do ix=1,NX
+    do iy=1,NY
+    do iz=1,NZ
+    do itb=1,NTH
+    do jc=1,COL
+    do ic=1,COL
+#endif
+          ucle_t(ic,jc,itb,iz,iy,ix,ipl)=  &
+ &                    (ve_t(ic,jc,itb,iz,iy,ix)-conjg(ve_t(jc,ic,itb,iz,iy,ix)))*zid8
+          uclo_t(ic,jc,itb,iz,iy,ix,ipl)=  &
+ &                    (vo_t(ic,jc,itb,iz,iy,ix)-conjg(vo_t(jc,ic,itb,iz,iy,ix)))*zid8
 
+    enddo
+    enddo
+    enddo
     enddo
     enddo
     enddo ! end of do ix,iy,iz
-!$OMP END DO
-!$OMP END PARALLEL
+#ifdef _OPENACC
+    !$acc end kernels
+#else
+    !$OMP END DO
+    !$OMP END PARALLEL
+#endif
+
 
   enddo ! end of do nu
   enddo ! end of do mu
+!$acc end data
+!$acc wait(0)
 
-  deallocate(wce,wco,ve,vo)
+  deallocate(wce_t_,wco_t_,ve_t_,vo_t_)
 
   return
 end subroutine
