@@ -161,4 +161,9 @@ exceptions:
 * [v1.2 (October 20,
   2014)](http://github.com/fiber-miniapp/ccs-qcd/tree/1.2)
     - Add the OpenACC implementation
+
+* [v1.2 (October 20,
+  2014)](http://github.com/fiber-miniapp/ccs-qcd/tree/1.2.1)
+    - Add the OpenACC implementation of clover term
+
   
