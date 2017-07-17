@@ -166,4 +166,6 @@ exceptions:
   2014)](http://github.com/fiber-miniapp/ccs-qcd/tree/1.2.1)
     - Add the OpenACC implementation of clover term
 
-  
+## Acknowledgments
+
+We thank Yukihiko Hirano and Akira Naruse of NVIDIA for the proposal and the development of the OpenACC version of the CCS QCD benchmark.
